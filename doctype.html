@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Une application de todo list interactive">
+    <meta name="keywords" content="todo list, tâches, organisation, productivité">
+    <meta name="author" content="Votre nom">
+    <title>Ma Todo List</title>
+
+    <!-- Lien vers le fichier JavaScript -->
+    <script src="../../JavaScript/compatibility/polyfills.js"></script>
+    <script src="../../JavaScript/compatibility/es6-support.js"></script>
+    <script src="../../JavaScript/compatibility/modern-browsers.js"></script>
+ 
+
+    <defer src="../../JavaScript/performance/script-loading.js"></script>
+
+    <!-- Lien vers le fichier CSS -->
+    <link rel="stylesheet" href="../../CSS/layout/positions-zindex.css">
+    <link rel="stylesheet" href="../../CSS/styles/typography.css">
+    
+</head>
+<body>
+    <header>
+        <h1>Ma Todo List</h1>
+    </header>
+
+    <main>
+        <!-- Section pour ajouter une nouvelle tâche -->
+        <section class="todo-input">
+            <form id="todo-form">
+                <input 
+                    type="text" 
+                    id="todo-input" 
+                    placeholder="Ajouter une nouvelle tâche"
+                    required
+                >
+                <button type="submit">Ajouter</button>
+            </form>
+        </section>
+
+        <!-- Section pour afficher les tâches -->
+        <section class="todo-list">
+            <h2>Mes tâches</h2>
+            <ul id="todo-items">
+                <!-- Les tâches seront ajoutées ici dynamiquement -->
+            </ul>
+        </section>
+    </main>
+
+    <footer>
+        <p>© 2025 Ma Todo List - Tous droits réservés</p>
+    </footer>
+
+    <!-- Lien vers le fichier JavaScript -->
+    <script src="../../JavaScript/performance/code-optimization.js"></script>
+    <script src="../../JavaScript/performance/memory-leaks.js"></script>
+</body>
+</html>
