@@ -1,0 +1,204 @@
+<link rel="stylesheet" href="../../CSS/debug-interface/storage-monitor.css">
+<script type="module" src="../../JavaScript/storage/sync/data-loader.js"></script>
+<script type="module" src="../../JavaScript/storage/structure/data-integrity.js"></script>
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moniteur de Stockage - Performance & Intégrité</title>
+    <link rel="stylesheet" href="storage-monitor.css">
+    <script type="module" src="../data-loader.js"></script>
+    <script type="module" src="../../Stockage Données/Structure/data-integrity.js"></script>
+</head>
+<body>
+    <div class="monitor-container">
+        <!-- Barre de statut en temps réel -->
+        <div class="status-bar">
+            <div class="status-item">
+                <span class="status-label">État:</span>
+                <span id="connectionStatus" class="status-value">Connecté</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Espace utilisé:</span>
+                <span id="storageUsage" class="status-value">0%</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Dernière sync:</span>
+                <span id="lastSync" class="status-value">Jamais</span>
+            </div>
+        </div>
+
+        <!-- Tableaux de bord -->
+        <div class="dashboard-grid">
+            <!-- Performance Metrics -->
+            <section class="dashboard-card" id="performanceMetrics">
+                <h2>Métriques de Performance</h2>
+                <div class="metric-container">
+                    <div class="metric-item">
+                        <h3>Temps de Réponse</h3>
+                        <canvas id="responseTimeChart"></canvas>
+                        <div class="metric-stats">
+                            <span>Moy: <span id="avgResponseTime">0ms</span></span>
+                            <span>Max: <span id="maxResponseTime">0ms</span></span>
+                        </div>
+                    </div>
+                    <div class="metric-item">
+                        <h3>Opérations/sec</h3>
+                        <canvas id="opsChart"></canvas>
+                        <div class="metric-stats">
+                            <span>Lectures: <span id="readOps">0</span>/s</span>
+                            <span>Écritures: <span id="writeOps">0</span>/s</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Intégrité des Données -->
+            <section class="dashboard-card" id="dataIntegrity">
+                <h2>Intégrité des Données</h2>
+                <div class="integrity-container">
+                    <div class="integrity-status">
+                        <div class="status-circle" id="integrityIndicator"></div>
+                        <span id="integrityStatus">Validation en cours...</span>
+                    </div>
+                    <div class="integrity-details">
+                        <ul id="integrityList">
+                            <li>Structure JSON: <span id="jsonStatus">-</span></li>
+                            <li>Validation des clés: <span id="keysStatus">-</span></li>
+                            <li>Cohérence des données: <span id="dataStatus">-</span></li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Alertes et Notifications -->
+            <section class="dashboard-card" id="alerts">
+                <h2>Alertes et Notifications</h2>
+                <div class="alerts-container">
+                    <div class="alerts-header">
+                        <select id="alertFilter">
+                            <option value="all">Toutes les alertes</option>
+                            <option value="error">Erreurs</option>
+                            <option value="warning">Avertissements</option>
+                            <option value="info">Informations</option>
+                        </select>
+                        <button id="clearAlerts">Effacer</button>
+                    </div>
+                    <div class="alerts-list" id="alertsList"></div>
+                </div>
+            </section>
+
+            <!-- État du Stockage -->
+            <section class="dashboard-card" id="storageState">
+                <h2>État du Stockage</h2>
+                <div class="storage-container">
+                    <div class="storage-chart">
+                        <canvas id="storageChart"></canvas>
+                    </div>
+                    <div class="storage-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Total:</span>
+                            <span id="totalStorage" class="stat-value">0 MB</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Utilisé:</span>
+                            <span id="usedStorage" class="stat-value">0 MB</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Disponible:</span>
+                            <span id="availableStorage" class="stat-value">0 MB</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Panneau de Contrôle -->
+        <div class="control-panel">
+            <div class="control-section">
+                <h3>Actions Rapides</h3>
+                <div class="button-group">
+                    <button id="validateIntegrity">Valider l'Intégrité</button>
+                    <button id="syncStorage">Synchroniser</button>
+                    <button id="optimizeStorage">Optimiser</button>
+                </div>
+            </div>
+            <div class="control-section">
+                <h3>Intervalle de Rafraîchissement</h3>
+                <select id="refreshInterval">
+                    <option value="1000">1 seconde</option>
+                    <option value="5000" selected>5 secondes</option>
+                    <option value="10000">10 secondes</option>
+                    <option value="30000">30 secondes</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Templates pour les alertes -->
+    <template id="alertTemplate">
+        <div class="alert-item">
+            <div class="alert-header">
+                <span class="alert-time"></span>
+                <span class="alert-type"></span>
+            </div>
+            <div class="alert-message"></div>
+        </div>
+    </template>
+
+    <script>
+        // Initialisation des graphiques
+        function initCharts() {
+            setupResponseTimeChart();
+            setupOpsChart();
+            setupStorageChart();
+        }
+
+        // Initialisation du monitoring
+        function initMonitoring() {
+            setupStorageMonitor();
+            setupIntegrityChecks();
+            setupAlertSystem();
+            startPerformanceMonitoring();
+        }
+
+        // Configuration des écouteurs d'événements
+        document.addEventListener('DOMContentLoaded', function() {
+            initCharts();
+            initMonitoring();
+            setupEventListeners();
+            startAutoRefresh();
+        });
+
+        function setupEventListeners() {
+            // Actions rapides
+            document.getElementById('validateIntegrity').addEventListener('click', validateStorageIntegrity);
+            document.getElementById('syncStorage').addEventListener('click', synchronizeStorage);
+            document.getElementById('optimizeStorage').addEventListener('click', optimizeStorage);
+            
+            // Filtres et contrôles
+            document.getElementById('alertFilter').addEventListener('change', filterAlerts);
+            document.getElementById('clearAlerts').addEventListener('click', clearAlerts);
+            document.getElementById('refreshInterval').addEventListener('change', updateRefreshInterval);
+        }
+
+        // Ces fonctions seront implémentées dans des fichiers JS séparés
+        function setupResponseTimeChart() { /* ... */ }
+        function setupOpsChart() { /* ... */ }
+        function setupStorageChart() { /* ... */ }
+        function setupStorageMonitor() { /* ... */ }
+        function setupIntegrityChecks() { /* ... */ }
+        function setupAlertSystem() { /* ... */ }
+        function startPerformanceMonitoring() { /* ... */ }
+        function validateStorageIntegrity() { /* ... */ }
+        function synchronizeStorage() { /* ... */ }
+        function optimizeStorage() { /* ... */ }
+        function filterAlerts() { /* ... */ }
+        function clearAlerts() { /* ... */ }
+        function updateRefreshInterval() { /* ... */ }
+        function startAutoRefresh() { /* ... */ }
+    </script>
+</body>
+</html>

@@ -1,0 +1,475 @@
+<link rel="stylesheet" href="../../CSS/debug-interface/debug-panel.css">
+<script type="module" src="../../JavaScript/storage/crud/storage-save.js"></script>
+<script type="module" src="../../JavaScript/features/form-validations.js"></script>
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sauvegarde dans le Stockage Local</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #2ecc71;
+            --warning-color: #f1c40f;
+            --error-color: #e74c3c;
+            --bg-color: #f5f6fa;
+            --card-bg: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            color: var(--primary-color);
+        }
+
+        .save-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-header {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--bg-color);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        input[type="text"], 
+        select, 
+        textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        textarea {
+            min-height: 200px;
+            font-family: monospace;
+            resize: vertical;
+        }
+
+        .editor-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .editor-section {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .preview-section {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            overflow: auto;
+        }
+
+        .validation-status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+            display: none;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .btn-primary {
+            background-color: var(--secondary-color);
+            color: white;
+        }
+
+        .btn-secondary {
+            background-color: #95a5a6;
+            color: white;
+        }
+
+        .btn-warning {
+            background-color: var(--warning-color);
+            color: black;
+        }
+
+        .compression-info {
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .status-message {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            border-radius: 4px;
+            display: none;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .error { background-color: var(--error-color); color: white; }
+        .success { background-color: var(--success-color); color: white; }
+        .warning { background-color: var(--warning-color); color: black; }
+
+        .storage-info {
+            display: flex;
+            gap: 20px;
+            padding: 15px;
+            background-color: var(--bg-color);
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .info-label {
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .info-value {
+            font-weight: bold;
+        }
+
+        @media (max-width: 768px) {
+            .editor-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="save-container">
+        <div class="form-header">
+            <h1>Sauvegarder dans le Stockage Local</h1>
+        </div>
+
+        <div class="storage-info">
+            <div class="info-item">
+                <span class="info-label">Espace Total</span>
+                <span class="info-value" id="totalStorage">-</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Espace Utilisé</span>
+                <span class="info-value" id="usedStorage">-</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Espace Disponible</span>
+                <span class="info-value" id="availableStorage">-</span>
+            </div>
+        </div>
+
+        <form id="saveForm">
+            <div class="form-group">
+                <label for="storageKey">Clé de stockage</label>
+                <input type="text" id="storageKey" required>
+            </div>
+
+            <div class="form-group">
+                <label for="dataType">Type de données</label>
+                <select id="dataType">
+                    <option value="json">JSON</option>
+                    <option value="string">Texte</option>
+                    <option value="number">Nombre</option>
+                </select>
+            </div>
+
+            <div class="editor-container">
+                <div class="editor-section">
+                    <label for="dataContent">Contenu</label>
+                    <textarea id="dataContent" required></textarea>
+                    <div id="validationStatus" class="validation-status"></div>
+                </div>
+
+                <div class="editor-section">
+                    <label>Aperçu</label>
+                    <div id="previewSection" class="preview-section"></div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="compression"> Activer la compression
+                </label>
+                <div id="compressionInfo" class="compression-info"></div>
+            </div>
+
+            <div class="btn-group">
+                <button type="submit" class="btn btn-primary">Sauvegarder</button>
+                <button type="button" id="validateBtn" class="btn btn-warning">Valider</button>
+                <button type="button" id="clearBtn" class="btn btn-secondary">Effacer</button>
+            </div>
+        </form>
+    </div>
+
+    <div id="statusMessage" class="status-message"></div>
+
+    <script type="module">
+        import { validateJSON } from '../../Stockage Données/Structure/validation-json.js';
+        import { validateKeys } from '../../Stockage Données/Structure/keys-validator.js';
+        import { handleStorageEvent } from '../../Synchronisation/Interface → Storage/event-handlers.js';
+
+        class StorageSaver {
+            constructor() {
+                this.initializeElements();
+                this.setupEventListeners();
+                this.updateStorageInfo();
+            }
+
+            initializeElements() {
+                this.form = document.getElementById('saveForm');
+                this.keyInput = document.getElementById('storageKey');
+                this.typeSelect = document.getElementById('dataType');
+                this.dataContent = document.getElementById('dataContent');
+                this.previewSection = document.getElementById('previewSection');
+                this.compressionCheckbox = document.getElementById('compression');
+                this.compressionInfo = document.getElementById('compressionInfo');
+                this.validationStatus = document.getElementById('validationStatus');
+                this.statusMessage = document.getElementById('statusMessage');
+            }
+
+            setupEventListeners() {
+                this.form.addEventListener('submit', (e) => this.handleSubmit(e));
+                this.dataContent.addEventListener('input', () => this.updatePreview());
+                this.typeSelect.addEventListener('change', () => this.updatePreview());
+                this.compressionCheckbox.addEventListener('change', () => this.updateCompressionInfo());
+                
+                document.getElementById('validateBtn').addEventListener('click', () => this.validateData());
+                document.getElementById('clearBtn').addEventListener('click', () => this.clearForm());
+            }
+
+            async handleSubmit(e) {
+                e.preventDefault();
+                
+                try {
+                    // Valider la clé
+                    const key = this.keyInput.value;
+                    if (!validateKeys([key])) {
+                        throw new Error('Clé invalide');
+                    }
+
+                    // Valider et préparer les données
+                    const data = this.prepareData();
+                    
+                    // Vérifier l'espace disponible
+                    if (!this.checkStorageSpace(data)) {
+                        throw new Error('Espace de stockage insuffisant');
+                    }
+
+                    // Compression si activée
+                    const finalData = this.compressionCheckbox.checked ? 
+                        await this.compressData(data) : data;
+
+                    // Sauvegarder
+                    localStorage.setItem(key, finalData);
+                    
+                    // Notifier
+                    handleStorageEvent({ 
+                        key, 
+                        type: 'save',
+                        compressed: this.compressionCheckbox.checked
+                    });
+
+                    this.showMessage('Données sauvegardées avec succès', 'success');
+                    this.clearForm();
+
+                } catch (error) {
+                    this.showMessage(`Erreur: ${error.message}`, 'error');
+                }
+            }
+
+            prepareData() {
+                const content = this.dataContent.value;
+                const type = this.typeSelect.value;
+
+                switch (type) {
+                    case 'json':
+                        if (!validateJSON(content)) {
+                            throw new Error('JSON invalide');
+                        }
+                        return content;
+                    
+                    case 'number':
+                        const num = Number(content);
+                        if (isNaN(num)) {
+                            throw new Error('Nombre invalide');
+                        }
+                        return String(num);
+                    
+                    default:
+                        return content;
+                }
+            }
+
+            updatePreview() {
+                try {
+                    const content = this.dataContent.value;
+                    const type = this.typeSelect.value;
+
+                    if (type === 'json' && content) {
+                        const parsed = JSON.parse(content);
+                        this.previewSection.innerHTML = `<pre>${JSON.stringify(parsed, null, 2)}</pre>`;
+                    } else {
+                        this.previewSection.textContent = content;
+                    }
+
+                    this.validationStatus.style.display = 'none';
+
+                } catch (error) {
+                    this.previewSection.innerHTML = '<em>Erreur de format</em>';
+                }
+            }
+
+            validateData() {
+                try {
+                    const data = this.prepareData();
+                    const key = this.keyInput.value;
+
+                    if (!validateKeys([key])) {
+                        throw new Error('Clé invalide');
+                    }
+
+                    this.validationStatus.textContent = 'Validation réussie';
+                    this.validationStatus.className = 'validation-status success';
+                    this.validationStatus.style.display = 'block';
+
+                } catch (error) {
+                    this.validationStatus.textContent = `Erreur: ${error.message}`;
+                    this.validationStatus.className = 'validation-status error';
+                    this.validationStatus.style.display = 'block';
+                }
+            }
+
+            async compressData(data) {
+                // Simulation de compression basique
+                // Dans un cas réel, utilisez une vraie bibliothèque de compression
+                return btoa(encodeURIComponent(data));
+            }
+
+            updateCompressionInfo() {
+                const content = this.dataContent.value;
+                if (!content) return;
+
+                const originalSize = new Blob([content]).size;
+                const compressed = btoa(encodeURIComponent(content));
+                const compressedSize = new Blob([compressed]).size;
+                const ratio = ((1 - compressedSize / originalSize) * 100).toFixed(1);
+
+                this.compressionInfo.textContent = 
+                    `Taille originale: ${this.formatSize(originalSize)} | ` +
+                    `Taille compressée: ${this.formatSize(compressedSize)} | ` +
+                    `Gain: ${ratio}%`;
+            }
+
+            checkStorageSpace(data) {
+                try {
+                    const testKey = `__test_${Date.now()}`;
+                    localStorage.setItem(testKey, data);
+                    localStorage.removeItem(testKey);
+                    return true;
+                } catch {
+                    return false;
+                }
+            }
+
+            updateStorageInfo() {
+                // Estimation de l'espace de stockage
+                const totalSpace = 5 * 1024 * 1024; // 5MB (estimation)
+                let usedSpace = 0;
+                
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    usedSpace += new Blob([localStorage.getItem(key)]).size;
+                }
+
+                document.getElementById('totalStorage').textContent = this.formatSize(totalSpace);
+                document.getElementById('usedStorage').textContent = this.formatSize(usedSpace);
+                document.getElementById('availableStorage').textContent = 
+                    this.formatSize(totalSpace - usedSpace);
+            }
+
+            clearForm() {
+                this.form.reset();
+                this.previewSection.textContent = '';
+                this.validationStatus.style.display = 'none';
+                this.compressionInfo.textContent = '';
+            }
+
+            formatSize(bytes) {
+                const units = ['B', 'KB', 'MB', 'GB'];
+                let size = bytes;
+                let unitIndex = 0;
+                
+                while (size >= 1024 && unitIndex < units.length - 1) {
+                    size /= 1024;
+                    unitIndex++;
+                }
+
+                return `${size.toFixed(1)} ${units[unitIndex]}`;
+            }
+
+            showMessage(message, type) {
+                this.statusMessage.textContent = message;
+                this.statusMessage.className = `status-message ${type}`;
+                this.statusMessage.style.display = 'block';
+                
+                setTimeout(() => {
+                    this.statusMessage.style.display = 'none';
+                }, 3000);
+            }
+        }
+
+        // Initialisation
+        document.addEventListener('DOMContentLoaded', () => {
+            new StorageSaver();
+        });
+    </script>
+</body>
+</html>

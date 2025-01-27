@@ -1,0 +1,481 @@
+<link rel="stylesheet" href="../../CSS/debug-interface/debug-panel.css">
+<script type="module" src="../../JavaScript/storage/crud/storage-delete.js"></script>
+<script type="module" src="../../JavaScript/storage/sync/event-handlers.js"></script>
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suppression du Stockage Local</title>
+    <style>
+        /* Styles intégrés pour la page de suppression */
+        :root {
+            --primary-color: #2c3e50;
+            --danger-color: #e74c3c;
+            --warning-color: #f39c12;
+            --success-color: #27ae60;
+            --bg-color: #f5f6fa;
+            --card-bg: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            color: var(--primary-color);
+        }
+
+        .delete-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: var(--card-bg);
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--bg-color);
+        }
+
+        .storage-list {
+            margin-bottom: 20px;
+        }
+
+        .storage-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border: 1px solid #eee;
+            margin-bottom: 8px;
+            border-radius: 4px;
+        }
+
+        .storage-item:hover {
+            background-color: #f8f9fa;
+        }
+
+        .item-info {
+            flex-grow: 1;
+        }
+
+        .key-name {
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .item-size {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .item-date {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .delete-btn {
+            background-color: var(--danger-color);
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .delete-btn:hover {
+            background-color: #c0392b;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .search-bar {
+            flex-grow: 1;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .filter-select {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .bulk-actions {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid var(--bg-color);
+        }
+
+        .select-all-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+
+        .delete-selected-btn {
+            background-color: var(--danger-color);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content {
+            position: relative;
+            background-color: var(--card-bg);
+            margin: 15% auto;
+            padding: 20px;
+            width: 80%;
+            max-width: 500px;
+            border-radius: 8px;
+        }
+
+        .close-modal {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        .status-message {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            display: none;
+        }
+
+        .success {
+            background-color: #d4edda;
+            color: var(--success-color);
+            border: 1px solid #c3e6cb;
+        }
+
+        .error {
+            background-color: #f8d7da;
+            color: var(--danger-color);
+            border: 1px solid #f5c6cb;
+        }
+
+        .warning {
+            background-color: #fff3cd;
+            color: var(--warning-color);
+            border: 1px solid #ffeeba;
+        }
+    </style>
+</head>
+<body>
+    <div class="delete-container">
+        <!-- En-tête -->
+        <div class="header">
+            <h1>Gestionnaire de Suppression</h1>
+            <p>Gérez et supprimez les données du stockage local</p>
+        </div>
+
+        <!-- Messages de statut -->
+        <div id="statusMessage" class="status-message"></div>
+
+        <!-- Contrôles -->
+        <div class="controls">
+            <input type="text" id="searchKeys" class="search-bar" placeholder="Rechercher des clés...">
+            <select id="filterType" class="filter-select">
+                <option value="all">Tous les types</option>
+                <option value="string">Texte</option>
+                <option value="number">Nombre</option>
+                <option value="object">Objet</option>
+                <option value="array">Tableau</option>
+            </select>
+        </div>
+
+        <!-- Liste des éléments stockés -->
+        <div class="storage-list" id="storageList">
+            <!-- Les éléments seront ajoutés dynamiquement ici -->
+        </div>
+
+        <!-- Actions en masse -->
+        <div class="bulk-actions">
+            <button id="selectAll" class="select-all-btn">Tout Sélectionner</button>
+            <button id="deleteSelected" class="delete-selected-btn">Supprimer la Sélection</button>
+        </div>
+    </div>
+
+    <!-- Modal de confirmation -->
+    <div id="confirmModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2>Confirmer la suppression</h2>
+            <p id="confirmMessage">Êtes-vous sûr de vouloir supprimer ces éléments ?</p>
+            <div class="modal-actions">
+                <button id="confirmDelete" class="delete-btn">Supprimer</button>
+                <button id="cancelDelete" class="select-all-btn">Annuler</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Template pour les éléments de stockage -->
+    <template id="storageItemTemplate">
+        <div class="storage-item">
+            <input type="checkbox" class="item-checkbox">
+            <div class="item-info">
+                <div class="key-name"></div>
+                <div class="item-details">
+                    <span class="item-size"></span>
+                    <span class="item-date"></span>
+                </div>
+            </div>
+            <button class="delete-btn">Supprimer</button>
+        </div>
+    </template>
+
+    <script type="module">
+        import { handleStorageEvent } from '../../Synchronisation/Interface → Storage/event-handlers.js';
+        import { validateKeys } from '../Structure/keys-validator.js';
+        import { deleteStorageItem } from './storage-delete.js';
+
+        class StorageDeleteManager {
+            constructor() {
+                this.selectedItems = new Set();
+                this.initializeElements();
+                this.setupEventListeners();
+                this.loadStorageItems();
+            }
+
+            initializeElements() {
+                this.searchInput = document.getElementById('searchKeys');
+                this.filterSelect = document.getElementById('filterType');
+                this.storageList = document.getElementById('storageList');
+                this.selectAllBtn = document.getElementById('selectAll');
+                this.deleteSelectedBtn = document.getElementById('deleteSelected');
+                this.confirmModal = document.getElementById('confirmModal');
+                this.statusMessage = document.getElementById('statusMessage');
+            }
+
+            setupEventListeners() {
+                this.searchInput.addEventListener('input', () => this.filterItems());
+                this.filterSelect.addEventListener('change', () => this.filterItems());
+                this.selectAllBtn.addEventListener('click', () => this.toggleSelectAll());
+                this.deleteSelectedBtn.addEventListener('click', () => this.showDeleteConfirmation());
+                
+                document.getElementById('confirmDelete').addEventListener('click', () => this.deleteSelectedItems());
+                document.getElementById('cancelDelete').addEventListener('click', () => this.hideModal());
+                document.querySelector('.close-modal').addEventListener('click', () => this.hideModal());
+            }
+
+            async loadStorageItems() {
+                try {
+                    const items = await this.getAllStorageItems();
+                    this.renderStorageItems(items);
+                } catch (error) {
+                    this.showMessage('Erreur lors du chargement des données', 'error');
+                }
+            }
+
+            async getAllStorageItems() {
+                const items = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    const value = localStorage.getItem(key);
+                    const size = new Blob([value]).size;
+                    items.push({
+                        key,
+                        value,
+                        size,
+                        type: this.getValueType(value),
+                        lastModified: new Date().toISOString() // Dans un cas réel, cette date serait stockée avec les données
+                    });
+                }
+                return items;
+            }
+
+            getValueType(value) {
+                try {
+                    const parsed = JSON.parse(value);
+                    return Array.isArray(parsed) ? 'array' : typeof parsed;
+                } catch {
+                    return typeof value;
+                }
+            }
+
+            renderStorageItems(items) {
+                this.storageList.innerHTML = '';
+                const template = document.getElementById('storageItemTemplate');
+
+                items.forEach(item => {
+                    const clone = template.content.cloneNode(true);
+                    
+                    const keyElement = clone.querySelector('.key-name');
+                    keyElement.textContent = item.key;
+
+                    const sizeElement = clone.querySelector('.item-size');
+                    sizeElement.textContent = this.formatSize(item.size);
+
+                    const dateElement = clone.querySelector('.item-date');
+                    dateElement.textContent = new Date(item.lastModified).toLocaleString();
+
+                    const deleteBtn = clone.querySelector('.delete-btn');
+                    deleteBtn.addEventListener('click', () => this.deleteItem(item.key));
+
+                    const checkbox = clone.querySelector('.item-checkbox');
+                    checkbox.addEventListener('change', (e) => this.toggleItemSelection(item.key, e.target.checked));
+
+                    this.storageList.appendChild(clone);
+                });
+            }
+
+            formatSize(bytes) {
+                const units = ['B', 'KB', 'MB', 'GB'];
+                let size = bytes;
+                let unitIndex = 0;
+                
+                while (size >= 1024 && unitIndex < units.length - 1) {
+                    size /= 1024;
+                    unitIndex++;
+                }
+
+                return `${size.toFixed(1)} ${units[unitIndex]}`;
+            }
+
+            filterItems() {
+                const searchTerm = this.searchInput.value.toLowerCase();
+                const filterType = this.filterSelect.value;
+                const items = this.storageList.querySelectorAll('.storage-item');
+
+                items.forEach(item => {
+                    const key = item.querySelector('.key-name').textContent.toLowerCase();
+                    const value = localStorage.getItem(key);
+                    const type = this.getValueType(value);
+
+                    const matchesSearch = key.includes(searchTerm);
+                    const matchesType = filterType === 'all' || type === filterType;
+
+                    item.style.display = matchesSearch && matchesType ? '' : 'none';
+                });
+            }
+
+            toggleSelectAll() {
+                const checkboxes = this.storageList.querySelectorAll('.item-checkbox');
+                const selectAll = !this.areAllItemsSelected();
+
+                checkboxes.forEach(checkbox => {
+                    checkbox.checked = selectAll;
+                    const key = checkbox.closest('.storage-item').querySelector('.key-name').textContent;
+                    this.toggleItemSelection(key, selectAll);
+                });
+            }
+
+            areAllItemsSelected() {
+                const checkboxes = this.storageList.querySelectorAll('.item-checkbox');
+                return Array.from(checkboxes).every(checkbox => checkbox.checked);
+            }
+
+            toggleItemSelection(key, selected) {
+                if (selected) {
+                    this.selectedItems.add(key);
+                } else {
+                    this.selectedItems.delete(key);
+                }
+                this.updateDeleteSelectedButton();
+            }
+
+            updateDeleteSelectedButton() {
+                this.deleteSelectedBtn.disabled = this.selectedItems.size === 0;
+            }
+
+            showDeleteConfirmation() {
+                const count = this.selectedItems.size;
+                const message = count === 1 
+                    ? 'Êtes-vous sûr de vouloir supprimer cet élément ?'
+                    : `Êtes-vous sûr de vouloir supprimer ces ${count} éléments ?`;
+                
+                document.getElementById('confirmMessage').textContent = message;
+                this.showModal();
+            }
+
+            async deleteSelectedItems() {
+                try {
+                    const keys = Array.from(this.selectedItems);
+                    
+                    // Validation des clés avant suppression
+                    if (!validateKeys(keys)) {
+                        throw new Error('Certaines clés sont invalides');
+                    }
+
+                    // Suppression des éléments
+                    for (const key of keys) {
+                        await deleteStorageItem(key);
+                        handleStorageEvent({ key, type: 'delete' });
+                    }
+
+                    this.selectedItems.clear();
+                    this.hideModal();
+                    await this.loadStorageItems();
+                    this.showMessage('Éléments supprimés avec succès', 'success');
+
+                } catch (error) {
+                    this.showMessage(`Erreur lors de la suppression : ${error.message}`, 'error');
+                }
+            }
+
+            async deleteItem(key) {
+                try {
+                    await deleteStorageItem(key);
+                    handleStorageEvent({ key, type: 'delete' });
+                    await this.loadStorageItems();
+                    this.showMessage('Élément supprimé avec succès', 'success');
+                } catch (error) {
+                    this.showMessage(`Erreur lors de la suppression : ${error.message}`, 'error');
+                }
+            }
+
+            showMessage(message, type) {
+                this.statusMessage.textContent = message;
+                this.statusMessage.className = `status-message ${type}`;
+                this.statusMessage.style.display = 'block';
+                setTimeout(() => {
+                    this.statusMessage.style.display = 'none';
+                }, 3000);
+            }
+
+            showModal() {
+                this.confirmModal.style.display = 'block';
+            }
+
+            hideModal() {
+                this.confirmModal.style.display = 'none';
+            }
+        }
+
+        // Initialisation
+        document.addEventListener('DOMContentLoaded', () => {
+            new StorageDeleteManager();
+        });
+    </script>
+</body>
+</html>
