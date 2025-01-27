@@ -1,0 +1,78 @@
+.
+├── doc.txt
+├── doctype.html
+└── frontend-debug
+    ├── CSS
+    │   ├── layout
+    │   │   ├── flexbox-grid.css
+    │   │   ├── media-queries.css
+    │   │   └── positions-zindex.css
+    │   └── styles
+    │       ├── animations-transitions.css
+    │       ├── colors-contrast.css
+    │       └── typography.css
+    ├── HTML
+    │   ├── accessibility
+    │   │   ├── alt-text.html
+    │   │   ├── aria-attributes.html
+    │   │   └── form-structure.html
+    │   └── structure
+    │       ├── hierarchy.html
+    │       ├── meta-tags.html
+    │       └── semantic.html
+    ├── JavaScript
+    │   ├── arbo.txt
+    │   ├── compatibility
+    │   │   ├── es6-support.js
+    │   │   ├── modern-browsers.js
+    │   │   └── polyfills.js
+    │   ├── features
+    │   │   ├── dom-events.js
+    │   │   ├── dom-manipulation.js
+    │   │   └── form-validations.js
+    │   ├── performance
+    │   │   ├── code-optimization.js
+    │   │   ├── memory-leaks.js
+    │   │   └── script-loading.js
+    │   └── storage
+    │       ├── crud
+    │       │   ├── storage-delete.js
+    │       │   ├── storage-read.js
+    │       │   └── storage-save.js
+    │       ├── structure
+    │       │   ├── data-integrity.js
+    │       │   ├── keys-validator.js
+    │       │   └── validation-json.js
+    │       └── sync
+    │           ├── auto-save.js
+    │           ├── data-loader.js
+    │           ├── event-handlers.js
+    │           └── page-refresh.js
+    ├── backend
+    │   ├── api
+    │   │   ├── endpoints
+    │   │   │   ├── delete-data.js
+    │   │   │   ├── get-data.js
+    │   │   │   └── save-data.js
+    │   │   └── middleware
+    │   │       ├── auth.js
+    │   │       └── validation.js
+    │   └── services
+    │       ├── data-processing.js
+    │       ├── error-handling.js
+    │       └── logging.js
+    └── html
+        ├── css
+        │   └── debug-interface
+        │       ├── debug-panel.css
+        │       └── storage-monitor.css
+        └── storage-tests
+            └── crud
+                ├── debug
+                │   ├── debug-panel.html
+                │   └── storage-monitor.html
+                ├── storage-delete.html
+                ├── storage-read.html
+                └── storage-save.html
+
+26 directories, 49 files
