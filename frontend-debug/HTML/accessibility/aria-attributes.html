@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vérification ARIA - Todo List</title>
+
+    <!-- Lien vers le fichier JavaScript -->
+    <script src="../../JavaScript/compatibility/polyfills.js"></script>
+    <script src="../../JavaScript/compatibility/es6-support.js"></script>
+    <script src="../../JavaScript/compatibility/modern-browsers.js"></script>
+
+    <!-- Lien vers le fichier CSS -->
+    <link rel="stylesheet" href="../../CSS/styles/colors-contrast.css">
+    
+</head>
+<body>
+    <!-- Navigation avec rôle landmark -->
+    <nav role="navigation" aria-label="Navigation principale">
+        <ul role="menubar">
+            <li role="none">
+                <a href="#" role="menuitem" aria-current="page">Accueil</a>
+            </li>
+            <li role="none">
+                <a href="#" role="menuitem">Catégories</a>
+            </li>
+        </ul>
+    </nav>
+
+    <!-- Zone principale -->
+    <main role="main">
+        <!-- Formulaire avec états et propriétés ARIA -->
+        <form role="form" aria-labelledby="form-title">
+            <h1 id="form-title">Ajouter une tâche</h1>
+            
+            <!-- Champ de recherche avec état live -->
+            <div role="search">
+                <label for="search">Rechercher une tâche</label>
+                <input 
+                    type="search" 
+                    id="search"
+                    aria-label="Rechercher dans les tâches"
+                    aria-describedby="search-help"
+                >
+                <span id="search-help">Entrez un mot-clé pour filtrer les tâches</span>
+            </div>
+
+            <div role="group" aria-labelledby="task-details">
+                <h2 id="task-details">Détails de la tâche</h2>
+                
+                <!-- Champ obligatoire -->
+                <div>
+                    <label for="task-title">Titre</label>
+                    <input 
+                        type="text" 
+                        id="task-title"
+                        aria-required="true"
+                        aria-invalid="false"
+                    >
+                </div>
+
+                <!-- Zone de texte avec compteur -->
+                <div>
+                    <label for="task-description">Description</label>
+                    <textarea 
+                        id="task-description"
+                        aria-describedby="char-count"
+                    ></textarea>
+                    <span id="char-count" aria-live="polite">
+                        0/200 caractères
+                    </span>
+                </div>
+
+                <!-- Liste déroulante avec état -->
+                <div>
+                    <label for="priority">Priorité</label>
+                    <select 
+                        id="priority"
+                        aria-required="true"
+                    >
+                        <option value="">Sélectionner une priorité</option>
+                        <option value="low">Basse</option>
+                        <option value="medium">Moyenne</option>
+                        <option value="high">Haute</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Bouton avec état de chargement -->
+            <button 
+                type="submit"
+                aria-busy="false"
+                aria-disabled="false"
+            >
+                Ajouter la tâche
+            </button>
+        </form>
+
+        <!-- Liste des tâches -->
+        <section aria-labelledby="task-list-title">
+            <h2 id="task-list-title">Mes tâches</h2>
+            
+            <!-- Alert pour les notifications -->
+            <div 
+                role="alert" 
+                aria-live="assertive"
+                hidden
+            >
+                Tâche ajoutée avec succès !
+            </div>
+
+            <!-- Liste avec rôle et états -->
+            <ul role="list" aria-label="Liste des tâches">
+                <li role="listitem">
+                    <!-- Carte de tâche -->
+                    <article aria-labelledby="task-1-title">
+                        <h3 id="task-1-title">Exemple de tâche</h3>
+                        
+                        <!-- Bouton d'expansion -->
+                        <button 
+                            aria-expanded="false"
+                            aria-controls="task-1-details"
+                        >
+                            Voir les détails
+                        </button>
+
+                        <!-- Détails de la tâche -->
+                        <div 
+                            id="task-1-details" 
+                            hidden
+                        >
+                            <p>Description de la tâche...</p>
+                            
+                            <!-- Case à cocher avec état -->
+                            <div role="checkbox" 
+                                 aria-checked="false"
+                                 tabindex="0"
+                            >
+                                Marquer comme terminé
+                            </div>
+
+                            <!-- Menu d'actions -->
+                            <div role="menu">
+                                <button role="menuitem">Modifier</button>
+                                <button 
+                                    role="menuitem"
+                                    aria-label="Supprimer cette tâche"
+                                >
+                                    Supprimer
+                                </button>
+                            </div>
+                        </div>
+                    </article>
+                </li>
+            </ul>
+        </section>
+
+        <!-- Status et progression -->
+        <div role="status" aria-live="polite">
+            5 tâches restantes
+        </div>
+
+        <!-- Barre de progression -->
+        <div 
+            role="progressbar" 
+            aria-valuenow="60"
+            aria-valuemin="0" 
+            aria-valuemax="100"
+            aria-label="Progression des tâches"
+        >
+            60% des tâches complétées
+        </div>
+    </main>
+
+    <!-- Dialogue modal -->
+    <div 
+        role="dialog"
+        aria-labelledby="modal-title"
+        aria-describedby="modal-desc"
+        aria-modal="true"
+        hidden
+    >
+        <h2 id="modal-title">Confirmation</h2>
+        <p id="modal-desc">Êtes-vous sûr de vouloir supprimer cette tâche ?</p>
+        <button>Confirmer</button>
+        <button>Annuler</button>
+    </div>
+
+
+</body>
+</html>

@@ -1,0 +1,193 @@
+/* === COLORS AND CONTRAST DEBUGGING === */
+
+/* Variables des couleurs principales */
+:root {
+    /* Couleurs principales */
+    --primary-color: #1976d2;
+    --secondary-color: #424242;
+    --accent-color: #ff4081;
+    
+    /* Couleurs de texte */
+    --text-dark: #212121;
+    --text-light: #ffffff;
+    --text-muted: #757575;
+    
+    /* Couleurs de fond */
+    --bg-light: #ffffff;
+    --bg-dark: #121212;
+    --bg-muted: #f5f5f5;
+    
+    /* Couleurs d'états */
+    --success: #4caf50;
+    --warning: #ff9800;
+    --error: #f44336;
+    --info: #2196f3;
+}
+
+/* === CLASSES DE TEST DE CONTRASTE === */
+
+/* Test de contraste texte sur fond clair */
+.contrast-test-light {
+    background-color: var(--bg-light);
+    color: var(--text-dark); /* Ratio de contraste attendu > 4.5:1 */
+}
+
+/* Test de contraste texte sur fond sombre */
+.contrast-test-dark {
+    background-color: var(--bg-dark);
+    color: var(--text-light); /* Ratio de contraste attendu > 4.5:1 */
+}
+
+/* Test liens sur différents fonds */
+.contrast-test-links-light {
+    background-color: var(--bg-light);
+}
+
+.contrast-test-links-light a {
+    color: var(--primary-color); /* Vérifier le contraste pour les liens */
+}
+
+.contrast-test-links-dark {
+    background-color: var(--bg-dark);
+}
+
+.contrast-test-links-dark a {
+    color: #64b5f6; /* Version plus claire pour fond sombre */
+}
+
+/* === CLASSES DE DÉBOGAGE === */
+
+/* Indicateur de contraste insuffisant */
+.debug-contrast {
+    outline: 3px solid red;
+}
+
+/* Test de daltonisme */
+.colorblind-test-deuteranopia {
+    filter: grayscale(100%);
+}
+
+.colorblind-test-protanopia {
+    filter: hue-rotate(180deg);
+}
+
+/* === ÉTATS INTERACTIFS === */
+
+/* Hover states avec contraste suffisant */
+.interactive-element:hover {
+    background-color: var(--primary-color);
+    color: var(--text-light);
+}
+
+/* Focus states avec contraste suffisant */
+.interactive-element:focus {
+    outline: 3px solid var(--accent-color);
+    outline-offset: 2px;
+}
+
+/* === CLASSES D'UTILITÉ === */
+
+/* Classes de texte avec contraste vérifié */
+.text-primary {
+    color: var(--primary-color);
+}
+
+.text-secondary {
+    color: var(--secondary-color);
+}
+
+.text-accent {
+    color: var(--accent-color);
+}
+
+/* Classes de fond avec contraste vérifié */
+.bg-primary {
+    background-color: var(--primary-color);
+    color: var(--text-light);
+}
+
+.bg-secondary {
+    background-color: var(--secondary-color);
+    color: var(--text-light);
+}
+
+.bg-accent {
+    background-color: var(--accent-color);
+    color: var(--text-light);
+}
+
+/* === TESTS DE LISIBILITÉ === */
+
+/* Test taille de texte minimale */
+.min-text-size {
+    font-size: 16px; /* Taille minimale recommandée */
+    line-height: 1.5;
+}
+
+/* Test d'espacement pour lisibilité */
+.readable-text {
+    letter-spacing: 0.01em;
+    word-spacing: 0.05em;
+}
+
+/* === ÉTATS D'ERREUR ET SUCCÈS === */
+
+/* Messages d'erreur avec contraste suffisant */
+.error-message {
+    background-color: #ffebee;
+    color: var(--error);
+    border: 1px solid var(--error);
+}
+
+/* Messages de succès avec contraste suffisant */
+.success-message {
+    background-color: #e8f5e9;
+    color: var(--success);
+    border: 1px solid var(--success);
+}
+
+/* === MEDIA QUERIES === */
+
+/* Ajustements pour mode sombre */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg-light: #121212;
+        --bg-dark: #ffffff;
+        --text-dark: #ffffff;
+        --text-light: #121212;
+    }
+}
+
+/* === COMMENTAIRES DE DÉBOGAGE === */
+/*
+Points à vérifier :
+1. Tous les textes ont-ils un ratio de contraste d'au moins 4.5:1 ?
+2. Les liens sont-ils distinguables du texte normal ?
+3. Les états hover/focus sont-ils suffisamment contrastés ?
+4. Les messages d'erreur/succès sont-ils lisibles ?
+5. Le site reste-t-il utilisable en mode daltonisme ?
+6. Les couleurs fonctionnent-elles en mode sombre ?
+*/
+
+/* === OUTILS DE DÉBOGAGE === */
+.show-contrast-issues * {
+    outline: 1px solid rgba(255, 0, 0, 0.2);
+}
+
+/* Classes pour tester différents types de daltonisme */
+.deuteranopia {
+    filter: grayscale(1);
+}
+
+.protanopia {
+    filter: hue-rotate(0.5turn);
+}
+
+.tritanopia {
+    filter: hue-rotate(0.75turn);
+}
+
+/* Test de luminosité */
+.brightness-test {
+    filter: brightness(0.5);
+}

@@ -1,0 +1,37 @@
+.
+├── arbo.txt
+└── frontend-debug
+    ├── CSS
+    │   ├── layout
+    │   │   ├── flexbox-grid.css
+    │   │   ├── media-queries.css
+    │   │   └── positions-zindex.css
+    │   └── styles
+    │       ├── animations-transitions.css
+    │       ├── colors-contrast.css
+    │       └── typography.css
+    ├── HTML
+    │   ├── accessibility
+    │   │   ├── alt-text.html
+    │   │   ├── aria-attributes.html
+    │   │   └── form-structure.html
+    │   └── structure
+    │       ├── doctype.html
+    │       ├── hierarchy.html
+    │       ├── meta-tags.html
+    │       └── semantic.html
+    └── JavaScript
+        ├── compatibility
+        │   ├── es6-support.js
+        │   ├── modern-browsers.js
+        │   └── polyfills.js
+        ├── features
+        │   ├── dom-events.js
+        │   ├── dom-manipulation.js
+        │   └── form-validations.js
+        └── performance
+            ├── code-optimization.js
+            ├── memory-leaks.js
+            └── script-loading.js
+
+12 directories, 23 files

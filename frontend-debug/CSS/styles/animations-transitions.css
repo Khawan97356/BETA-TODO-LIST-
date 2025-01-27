@@ -1,0 +1,222 @@
+/* === DEBUGGING ANIMATIONS & TRANSITIONS === */
+
+/* media-queries.css dépend de */
+@import 'flexbox-grid.css';
+
+/* positions-zindex.css dépend de */
+@import 'flexbox-grid.css';
+
+/* colors-contrast.css dépend de */
+@import 'typography.css';
+
+/* animations-transitions.css dépend de */
+@import 'colors-contrast.css';
+
+/* Variables pour les animations */
+:root {
+    /* Durées standards */
+    --duration-fast: 150ms;
+    --duration-normal: 300ms;
+    --duration-slow: 500ms;
+    
+    /* Timing functions */
+    --ease-default: cubic-bezier(0.4, 0, 0.2, 1);
+    --ease-in: cubic-bezier(0.4, 0, 1, 1);
+    --ease-out: cubic-bezier(0, 0, 0.2, 1);
+    --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* === CLASSES DE DÉBOGAGE === */
+
+/* Visualisation des animations */
+.debug-animation {
+    position: relative;
+}
+
+.debug-animation::after {
+    content: attr(data-animation);
+    position: absolute;
+    bottom: -20px;
+    left: 0;
+    font-size: 12px;
+    color: #666;
+}
+
+/* Ralentir les animations pour le débogage */
+.debug-slow-motion * {
+    animation-duration: 3s !important;
+    transition-duration: 3s !important;
+}
+
+/* === TESTS DE PERFORMANCE === */
+
+/* Test de fluidité */
+.test-smoothness {
+    transform: translateZ(0); /* Force GPU acceleration */
+    will-change: transform; /* Optimisation des performances */
+}
+
+/* === TRANSITIONS DE BASE === */
+
+/* Test de transitions d'opacité */
+.fade-transition {
+    opacity: 1;
+    transition: opacity var(--duration-normal) var(--ease-default);
+}
+
+.fade-transition:hover {
+    opacity: 0.5;
+}
+
+/* Test de transitions de couleur */
+.color-transition {
+    background-color: #fff;
+    transition: background-color var(--duration-normal) var(--ease-default);
+}
+
+.color-transition:hover {
+    background-color: #f0f0f0;
+}
+
+/* Test de transitions de transformation */
+.transform-transition {
+    transform: scale(1);
+    transition: transform var(--duration-normal) var(--ease-default);
+}
+
+.transform-transition:hover {
+    transform: scale(1.1);
+}
+
+/* === ANIMATIONS === */
+
+/* Test d'animation de rotation */
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.spin-animation {
+    animation: spin var(--duration-slow) linear infinite;
+}
+
+/* Test d'animation de pulsation */
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+.pulse-animation {
+    animation: pulse var(--duration-slow) var(--ease-in-out) infinite;
+}
+
+/* Test d'animation de shake */
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-10px); }
+    75% { transform: translateX(10px); }
+}
+
+.shake-animation {
+    animation: shake var(--duration-fast) var(--ease-in-out);
+}
+
+/* === CLASSES DE TEST === */
+
+/* Test de performance des transformations */
+.transform-test {
+    transform: translate3d(0, 0, 0);
+    transition: transform var(--duration-normal) var(--ease-default);
+}
+
+/* Test d'animations composées */
+.composite-animation {
+    animation: 
+        spin var(--duration-slow) linear infinite,
+        pulse var(--duration-normal) var(--ease-in-out) infinite;
+}
+
+/* === MEDIA QUERIES POUR ANIMATIONS === */
+
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* === UTILITAIRES DE DÉBOGAGE === */
+
+/* Indicateur d'animation en cours */
+.animation-indicator {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    padding: 5px;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    font-size: 12px;
+    z-index: 9999;
+}
+
+/* Visualisation des éléments animés */
+.highlight-animated {
+    outline: 2px dashed red;
+}
+
+/* === CHECKLIST DE DÉBOGAGE === */
+/*
+Points à vérifier :
+1. Les animations sont-elles fluides ?
+2. Les transitions respectent-elles les durées standards ?
+3. Les animations sont-elles désactivées pour prefers-reduced-motion ?
+4. Les animations utilisent-elles des propriétés performantes ?
+5. Les animations composées fonctionnent-elles correctement ?
+6. Les transitions sont-elles cohérentes sur tout le site ?
+7. Les animations ajoutent-elles de la valeur à l'UX ?
+*/
+
+/* === TESTS DE PERFORMANCE === */
+.performance-test {
+    animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    perspective: 1000px;
+}
+
+/* === ANIMATIONS D'ÉTAT === */
+
+/* Loading */
+@keyframes loading {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.loading-animation {
+    animation: loading var(--duration-normal) linear infinite;
+}
+
+/* Success */
+@keyframes success {
+    0% { transform: scale(0); }
+    70% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+.success-animation {
+    animation: success var(--duration-normal) var(--ease-out) forwards;
+}
+
+/* Error */
+@keyframes error {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-5px); }
+    40%, 80% { transform: translateX(5px); }
+}
+
+.error-animation {
+    animation: error var(--duration-fast) ease-in-out;
+}

@@ -1,0 +1,223 @@
+/* === MEDIA QUERIES DEBUGGING === */
+
+/* Variables des breakpoints */
+:root {
+    --mobile-s: 320px;
+    --mobile-m: 375px;
+    --mobile-l: 425px;
+    --tablet: 768px;
+    --laptop: 1024px;
+    --laptop-l: 1440px;
+    --desktop: 1920px;
+}
+
+/* === CLASSES DE TEST POUR BREAKPOINTS === */
+.breakpoint-indicator {
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    background: #333;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 4px;
+    z-index: 9999;
+}
+
+/* Affiche le breakpoint actuel */
+.breakpoint-indicator::after {
+    content: 'Desktop (>1920px)';
+}
+
+/* === MOBILE FIRST APPROACH === */
+
+/* Small Mobile Devices (320px et plus) */
+@media screen and (min-width: 320px) {
+    .breakpoint-indicator::after {
+        content: 'Mobile S (≥320px)';
+    }
+    
+    /* Test de la taille de police responsive */
+    html {
+        font-size: 14px;
+    }
+}
+
+/* Medium Mobile Devices (375px et plus) */
+@media screen and (min-width: 375px) {
+    .breakpoint-indicator::after {
+        content: 'Mobile M (≥375px)';
+    }
+    
+    html {
+        font-size: 15px;
+    }
+}
+
+/* Large Mobile Devices (425px et plus) */
+@media screen and (min-width: 425px) {
+    .breakpoint-indicator::after {
+        content: 'Mobile L (≥425px)';
+    }
+    
+    html {
+        font-size: 16px;
+    }
+}
+
+/* Tablets (768px et plus) */
+@media screen and (min-width: 768px) {
+    .breakpoint-indicator::after {
+        content: 'Tablet (≥768px)';
+    }
+}
+
+/* Laptops (1024px et plus) */
+@media screen and (min-width: 1024px) {
+    .breakpoint-indicator::after {
+        content: 'Laptop (≥1024px)';
+    }
+}
+
+/* Large Laptops (1440px et plus) */
+@media screen and (min-width: 1440px) {
+    .breakpoint-indicator::after {
+        content: 'Laptop L (≥1440px)';
+    }
+}
+
+/* === ORIENTATION TESTS === */
+@media screen and (orientation: landscape) {
+    .orientation-test {
+        background: #e0f7fa;
+    }
+}
+
+@media screen and (orientation: portrait) {
+    .orientation-test {
+        background: #fff3e0;
+    }
+}
+
+/* === DEVICE PIXEL RATIO TESTS === */
+@media screen and (-webkit-min-device-pixel-ratio: 2),
+       screen and (min-resolution: 192dpi) {
+    .retina-test {
+        background-image: url('high-res.jpg');
+    }
+}
+
+/* === FEATURE QUERIES === */
+@supports (display: grid) {
+    .grid-test {
+        display: grid;
+    }
+}
+
+/* === PRINT STYLES === */
+@media print {
+    .no-print {
+        display: none;
+    }
+    
+    body {
+        font-size: 12pt;
+    }
+    
+    a[href]::after {
+        content: " (" attr(href) ")";
+    }
+}
+
+/* === DEBUGGING UTILITIES === */
+
+/* Test de largeur responsive */
+.container {
+    width: 90%;
+    max-width: 1200px;
+    margin: 0 auto;
+    background: #f0f0f0;
+}
+
+/* Test de colonnes responsive */
+.col-test {
+    width: 100%;
+}
+
+@media screen and (min-width: 768px) {
+    .col-test {
+        width: 50%;
+    }
+}
+
+@media screen and (min-width: 1024px) {
+    .col-test {
+        width: 33.333%;
+    }
+}
+
+/* Test d'images responsive */
+.img-responsive {
+    max-width: 100%;
+    height: auto;
+}
+
+/* Test de navigation responsive */
+.nav-toggle {
+    display: block;
+}
+
+@media screen and (min-width: 768px) {
+    .nav-toggle {
+        display: none;
+    }
+}
+
+/* === COMMENTAIRES DE DÉBOGAGE === */
+/*
+Points à vérifier :
+1. Les breakpoints sont-ils déclenchés aux bonnes largeurs ?
+2. Le contenu s'adapte-t-il correctement à chaque breakpoint ?
+3. Les images sont-elles responsive ?
+4. La typographie est-elle lisible à tous les breakpoints ?
+5. La navigation fonctionne-t-elle correctement sur mobile ?
+6. Les styles d'impression sont-ils appropriés ?
+7. Les feature queries fonctionnent-elles ?
+*/
+
+/* === PERFORMANCE MEDIA QUERIES === */
+/* Préférence de réduction de mouvement */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation: none !important;
+        transition: none !important;
+    }
+}
+
+/* Mode sombre */
+@media (prefers-color-scheme: dark) {
+    body {
+        background: #333;
+        color: #fff;
+    }
+}
+
+/* === DEBUGGING GRILLE === */
+.debug-grid {
+    background: linear-gradient(to right, 
+        rgba(255,0,0,0.1) 1px, 
+        transparent 1px
+    );
+    background-size: 8.33% 100%;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: -1;
+    display: none;
+}
+
+/* Activer la grille de débogage sur demande */
+.debug .debug-grid {
+    display: block;
+}

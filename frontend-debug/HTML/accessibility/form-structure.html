@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vérification Structure des Formulaires</title>
+
+    <!-- Lien vers le fichier JavaScript -->
+    <script src="../../JavaScript/compatibility/polyfills.js"></script>
+    <script src="../../JavaScript/compatibility/es6-support.js"></script>
+    <script src="../../JavaScript/compatibility/modern-browsers.js"></script>
+
+    <! -- Lien vers le fichier CSS --!>
+    <link rel="stylesheet" href="../../CSS/layout/flexbox-grid.css">
+    
+    <link rel="stylesheet" href="../../CSS/layout/media-queries.css">
+    <link rel="stylesheet" href="../../CSS/styles/animations-transitions.css">
+    
+    
+</head>
+<body>
+    <main>
+        <h1>Test de Structure des Formulaires</h1>
+
+        <!-- 1. Formulaire basique avec labels -->
+        <form action="#" method="post" id="form1">
+            <div>
+                <label for="nom">Nom :</label>
+                <input type="text" id="nom" name="nom" required>
+            </div>
+
+            <!-- 2. Groupe de champs avec fieldset -->
+            <fieldset>
+                <legend>Informations de contact</legend>
+                <div>
+                    <label for="email">Email :</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+                <div>
+                    <label for="tel">Téléphone :</label>
+                    <input type="tel" id="tel" name="tel">
+                </div>
+            </fieldset>
+
+            <!-- 3. Champs requis avec aria-required -->
+            <div>
+                <label for="password">
+                    Mot de passe :
+                    <span class="required" aria-hidden="true">*</span>
+                </label>
+                <input 
+                    type="password" 
+                    id="password" 
+                    name="password" 
+                    required 
+                    aria-required="true"
+                >
+            </div>
+
+            <!-- 4. Messages d'erreur avec aria-describedby -->
+            <div>
+                <label for="age">Âge :</label>
+                <input 
+                    type="number" 
+                    id="age" 
+                    name="age"
+                    aria-describedby="age-error"
+                >
+                <span id="age-error" class="error" role="alert"></span>
+            </div>
+
+            <!-- 5. Boutons radio avec role group -->
+            <div role="group" aria-labelledby="preference-label">
+                <p id="preference-label">Préférence de contact :</p>
+                <div>
+                    <input type="radio" id="pref-email" name="preference" value="email">
+                    <label for="pref-email">Email</label>
+                </div>
+                <div>
+                    <input type="radio" id="pref-tel" name="preference" value="telephone">
+                    <label for="pref-tel">Téléphone</label>
+                </div>
+            </div>
+
+            <!-- 6. Liste déroulante accessible -->
+            <div>
+                <label for="sujet">Sujet :</label>
+                <select id="sujet" name="sujet">
+                    <option value="">Choisissez un sujet</option>
+                    <option value="info">Information</option>
+                    <option value="probleme">Problème technique</option>
+                </select>
+            </div>
+
+            <!-- 7. Zone de texte avec instructions -->
+            <div>
+                <label for="message">Message :</label>
+                <textarea 
+                    id="message" 
+                    name="message"
+                    aria-describedby="message-help"
+                ></textarea>
+                <div id="message-help" class="help-text">
+                    Maximum 500 caractères
+                </div>
+            </div>
+
+            <!-- 8. Bouton de soumission -->
+            <button type="submit">Envoyer</button>
+        </form>
+
+        <!-- Liste de vérification -->
+        <section>
+            <h2>Points à vérifier</h2>
+            <ul>
+                <li>Labels correctement associés aux champs</li>
+                <li>Utilisation appropriée des fieldset/legend</li>
+                <li>Indications des champs requis</li>
+                <li>Messages d'erreur accessibles</li>
+                <li>Groupement logique des champs</li>
+                <li>Instructions claires</li>
+                <li>Navigation au clavier possible</li>
+                <li>Rôles ARIA appropriés</li>
+            </ul>
+        </section>
+    </main>
+
+    <!-- Lien vers le fichier JavaScript -->
+    <script src="../../JavaScript/features/form-validations.js"></script>
+    <script src="../../JavaScript/features/dom-events.js"></script>
+</body>
+</html>
