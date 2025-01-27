@@ -1,0 +1,221 @@
+<link rel="stylesheet" href="../../CSS/debug-interface/debug-panel.css">
+<script type="module" src="../../JavaScript/storage/sync/event-handlers.js"></script>
+<script type="module" src="../../JavaScript/storage/sync/page-refresh.js"></script>
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panneau de Débogage - LocalStorage</title>
+    <link rel="stylesheet" href="debug-panel.css">
+    <script type="module" src="../event-handlers.js"></script>
+    <script type="module" src="../../Storage → Interface/page-refresh.js"></script>
+</head>
+<body>
+    <div class="debug-container">
+        <!-- En-tête du panneau -->
+        <header class="debug-header">
+            <h1>Panneau de Débogage LocalStorage</h1>
+            <div class="storage-status">
+                <span class="status-indicator"></span>
+                <span id="storageSize">Utilisé: 0 MB / 0 MB</span>
+            </div>
+        </header>
+
+        <!-- Panneau principal -->
+        <main class="debug-main">
+            <!-- Section Monitoring -->
+            <section class="debug-section" id="monitoringSection">
+                <h2>Monitoring en Temps Réel</h2>
+                <div class="monitoring-grid">
+                    <div class="monitor-card">
+                        <h3>Opérations</h3>
+                        <ul id="operationsList">
+                            <li>Lecture: <span id="readCount">0</span></li>
+                            <li>Écriture: <span id="writeCount">0</span></li>
+                            <li>Suppression: <span id="deleteCount">0</span></li>
+                        </ul>
+                    </div>
+                    <div class="monitor-card">
+                        <h3>Erreurs</h3>
+                        <ul id="errorsList">
+                            <li>Quota: <span id="quotaErrors">0</span></li>
+                            <li>Validation: <span id="validationErrors">0</span></li>
+                            <li>Autres: <span id="otherErrors">0</span></li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section Données -->
+            <section class="debug-section" id="dataSection">
+                <h2>Inspecteur de Données</h2>
+                <div class="data-tools">
+                    <input type="text" id="searchKey" placeholder="Rechercher une clé...">
+                    <button id="refreshData">Actualiser</button>
+                    <button id="clearAll" class="danger">Tout Effacer</button>
+                </div>
+                <div class="data-viewer">
+                    <table id="dataTable">
+                        <thead>
+                            <tr>
+                                <th>Clé</th>
+                                <th>Type</th>
+                                <th>Taille</th>
+                                <th>Dernière Modification</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dataTableBody"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Section Tests -->
+            <section class="debug-section" id="testSection">
+                <h2>Tests et Validation</h2>
+                <div class="test-controls">
+                    <button id="runTests">Lancer les Tests</button>
+                    <button id="validateAll">Valider Toutes les Données</button>
+                </div>
+                <div class="test-results" id="testResults">
+                    <h3>Résultats des Tests</h3>
+                    <ul id="testList"></ul>
+                </div>
+            </section>
+
+            <!-- Section Journal -->
+            <section class="debug-section" id="logSection">
+                <h2>Journal des Événements</h2>
+                <div class="log-controls">
+                    <select id="logLevel">
+                        <option value="all">Tous</option>
+                        <option value="error">Erreurs</option>
+                        <option value="warning">Avertissements</option>
+                        <option value="info">Informations</option>
+                    </select>
+                    <button id="clearLogs">Effacer le Journal</button>
+                </div>
+                <div class="log-viewer" id="logViewer"></div>
+            </section>
+        </main>
+
+        <!-- Pied de page avec actions rapides -->
+        <footer class="debug-footer">
+            <div class="quick-actions">
+                <button id="exportData">Exporter les Données</button>
+                <button id="importData">Importer des Données</button>
+                <button id="compressAll">Compresser Tout</button>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Template pour les entrées de journal -->
+    <template id="logEntryTemplate">
+        <div class="log-entry">
+            <span class="log-time"></span>
+            <span class="log-level"></span>
+            <span class="log-message"></span>
+        </div>
+    </template>
+
+    <!-- Template pour les lignes de données -->
+    <template id="dataRowTemplate">
+        <tr>
+            <td class="key-cell"></td>
+            <td class="type-cell"></td>
+            <td class="size-cell"></td>
+            <td class="modified-cell"></td>
+            <td class="actions-cell">
+                <button class="view-btn">Voir</button>
+                <button class="edit-btn">Éditer</button>
+                <button class="delete-btn">Supprimer</button>
+            </td>
+        </tr>
+    </template>
+
+    <!-- Modal de visualisation/édition -->
+    <div id="dataModal" class="modal">
+        <div class="modal-content">
+            <header class="modal-header">
+                <h3>Données pour <span id="modalKey"></span></h3>
+                <button class="close-modal">&times;</button>
+            </header>
+            <div class="modal-body">
+                <div class="data-preview">
+                    <textarea id="dataEditor"></textarea>
+                </div>
+                <div class="data-info">
+                    <p>Type: <span id="dataType"></span></p>
+                    <p>Taille: <span id="dataSize"></span></p>
+                    <p>Créé le: <span id="createDate"></span></p>
+                    <p>Modifié le: <span id="modifyDate"></span></p>
+                </div>
+            </div>
+            <footer class="modal-footer">
+                <button id="saveChanges">Sauvegarder</button>
+                <button id="validateData">Valider</button>
+                <button id="cancelChanges">Annuler</button>
+            </footer>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialisation des gestionnaires d'événements
+            initEventHandlers();
+            
+            // Initialisation du monitoring
+            initMonitoring();
+            
+            // Chargement initial des données
+            loadStorageData();
+            
+            // Mise à jour du statut de stockage
+            updateStorageStatus();
+        });
+
+        // Fonction pour initialiser les gestionnaires d'événements
+        function initEventHandlers() {
+            // Gestionnaires pour les boutons principaux
+            document.getElementById('refreshData').addEventListener('click', refreshStorageData);
+            document.getElementById('clearAll').addEventListener('click', clearAllData);
+            document.getElementById('runTests').addEventListener('click', runStorageTests);
+            document.getElementById('validateAll').addEventListener('click', validateAllData);
+            document.getElementById('clearLogs').addEventListener('click', clearLogs);
+            document.getElementById('exportData').addEventListener('click', exportStorageData);
+            document.getElementById('importData').addEventListener('click', importStorageData);
+            document.getElementById('compressAll').addEventListener('click', compressAllData);
+
+            // Gestionnaire de recherche
+            document.getElementById('searchKey').addEventListener('input', filterStorageData);
+
+            // Gestionnaires pour le modal
+            document.querySelector('.close-modal').addEventListener('click', closeModal);
+            document.getElementById('saveChanges').addEventListener('click', saveModalChanges);
+            document.getElementById('cancelChanges').addEventListener('click', closeModal);
+
+            // Gestionnaire de niveau de log
+            document.getElementById('logLevel').addEventListener('change', filterLogs);
+        }
+
+        // Ces fonctions seront implémentées dans des fichiers JS séparés
+        function initMonitoring() { /* ... */ }
+        function loadStorageData() { /* ... */ }
+        function updateStorageStatus() { /* ... */ }
+        function refreshStorageData() { /* ... */ }
+        function clearAllData() { /* ... */ }
+        function runStorageTests() { /* ... */ }
+        function validateAllData() { /* ... */ }
+        function clearLogs() { /* ... */ }
+        function exportStorageData() { /* ... */ }
+        function importStorageData() { /* ... */ }
+        function compressAllData() { /* ... */ }
+        function filterStorageData() { /* ... */ }
+        function closeModal() { /* ... */ }
+        function saveModalChanges() { /* ... */ }
+        function filterLogs() { /* ... */ }
+    </script>
+</body>
+</html>

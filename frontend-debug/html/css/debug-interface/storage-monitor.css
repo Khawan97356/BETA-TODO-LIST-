@@ -1,0 +1,269 @@
+/* storage-monitor.css */
+
+/* Container principal du moniteur de stockage */
+
+
+@import '../layout/flexbox-grid.css';
+@import '../styles/colors-contrast.css';
+@import '../styles/animations-transitions.css';
+
+.storage-monitor-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    width: 360px;
+    background-color: #1e1e1e;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    font-family: 'SF Mono', 'Consolas', monospace;
+    z-index: 9998;
+}
+
+/* En-tête du moniteur */
+.monitor-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background-color: #252525;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    border-bottom: 1px solid #333;
+}
+
+.monitor-title {
+    color: #00ff00;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+/* Tableau de bord des statistiques */
+.monitor-dashboard {
+    padding: 16px;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+}
+
+.stat-card {
+    background-color: #252525;
+    padding: 12px;
+    border-radius: 6px;
+    border: 1px solid #333;
+}
+
+.stat-label {
+    color: #888;
+    font-size: 11px;
+    margin-bottom: 4px;
+}
+
+.stat-value {
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+/* Graphiques et visualisations */
+.monitor-charts {
+    padding: 16px;
+    border-top: 1px solid #333;
+}
+
+.usage-chart {
+    height: 200px;
+    margin-bottom: 16px;
+    background-color: #252525;
+    border-radius: 6px;
+    padding: 12px;
+}
+
+.chart-legend {
+    display: flex;
+    gap: 16px;
+    margin-top: 8px;
+    padding: 8px;
+    background-color: #1a1a1a;
+    border-radius: 4px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: #888;
+}
+
+/* Liste des événements */
+.event-list {
+    max-height: 300px;
+    overflow-y: auto;
+    padding: 16px;
+    border-top: 1px solid #333;
+}
+
+.event-item {
+    padding: 8px 12px;
+    margin-bottom: 8px;
+    background-color: #252525;
+    border-radius: 4px;
+    border-left: 3px solid transparent;
+    transition: background-color 0.2s ease;
+}
+
+.event-item:hover {
+    background-color: #2a2a2a;
+}
+
+/* Types d'événements */
+.event-save { border-left-color: #4caf50; }
+.event-read { border-left-color: #2196f3; }
+.event-delete { border-left-color: #f44336; }
+.event-error { border-left-color: #ff9800; }
+
+.event-timestamp {
+    color: #666;
+    font-size: 10px;
+}
+
+.event-message {
+    color: #ddd;
+    font-size: 12px;
+    margin-top: 4px;
+}
+
+/* Barre d'outils */
+.monitor-toolbar {
+    padding: 12px 16px;
+    background-color: #252525;
+    border-top: 1px solid #333;
+    display: flex;
+    gap: 8px;
+}
+
+.monitor-button {
+    padding: 6px 12px;
+    background-color: #333;
+    border: none;
+    border-radius: 4px;
+    color: #fff;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.monitor-button:hover {
+    background-color: #444;
+}
+
+.monitor-button.danger {
+    background-color: #c62828;
+}
+
+.monitor-button.danger:hover {
+    background-color: #d32f2f;
+}
+
+/* Indicateurs de statut */
+.status-badges {
+    display: flex;
+    gap: 8px;
+    padding: 8px 16px;
+    background-color: #1a1a1a;
+}
+
+.status-badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 10px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.status-normal { background-color: #1b5e20; color: #a5d6a7; }
+.status-warning { background-color: #f57f17; color: #fff; }
+.status-critical { background-color: #b71c1c; color: #ffcdd2; }
+
+/* Animations */
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+.status-badge.active {
+    animation: pulse 2s infinite;
+}
+
+/* Mode sombre renforcé */
+@media (prefers-color-scheme: dark) {
+    .storage-monitor-container {
+        background-color: #141414;
+    }
+    
+    .stat-card {
+        background-color: #1a1a1a;
+    }
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+    .storage-monitor-container {
+        width: calc(100% - 32px);
+        margin: 16px;
+    }
+
+    .monitor-dashboard {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Accessibilité */
+.monitor-button:focus,
+.event-item:focus {
+    outline: 2px solid #00ff00;
+    outline-offset: 2px;
+}
+
+/* Support pour l'impression */
+@media print {
+    .storage-monitor-container {
+        position: static;
+        width: 100%;
+        box-shadow: none;
+    }
+
+    .monitor-toolbar,
+    .status-badges {
+        display: none;
+    }
+}
+
+/* Tooltips */
+[data-tooltip] {
+    position: relative;
+}
+
+[data-tooltip]:before {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 4px 8px;
+    background-color: #333;
+    color: #fff;
+    font-size: 10px;
+    border-radius: 4px;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease;
+}
+
+[data-tooltip]:hover:before {
+    opacity: 1;
+    visibility: visible;
+}
