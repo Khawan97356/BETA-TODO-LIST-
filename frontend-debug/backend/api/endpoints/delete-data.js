@@ -1,8 +1,7 @@
 // delete-data.js
-
-import { authenticate } from '../middleware/auth.js';
-import { validateRequest } from '../middleware/validation.js';
-import { logAction } from '../../services/logging.js';
+import { auth } from '../middleware/auth.js';
+import { validation } from '../middleware/validation.js';
+import { errorHandling } from '../../services/error-handling.js';
 
 function handleDeleteRequest(endpoint) {
     // Stockage des codes d'erreur

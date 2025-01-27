@@ -1,9 +1,9 @@
 // storage-save.js
 
+import { validateJSON } from '../../structure/validation-json.js';
+import { validateKeys } from '../../structure/keys-validator.js';
+import { autoSave } from '../../sync/auto-save.js';
 
-import { validateJSON } from '../structure/validation-json.js';
-import { validateKeys } from '../structure/keys-validator.js';
-import { handleStorageEvent } from '../sync/event-handlers.js';
 
 
 const storageSaveService = (() => {

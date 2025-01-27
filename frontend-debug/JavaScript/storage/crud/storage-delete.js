@@ -1,6 +1,6 @@
 // storage-delete.js
-import { validateKeys } from '../structure/keys-validator.js';
-import { handleStorageEvent } from '../sync/event-handlers.js';
+import { dataLoader } from '../../sync/data-loader.js';
+import { checkDataIntegrity } from '../../structure/data-integrity.js';
 
 const storageDeleteService = (() => {
     // Constants pour la configuration

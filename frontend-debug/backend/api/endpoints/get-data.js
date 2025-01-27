@@ -1,7 +1,7 @@
 // get-data.js
-import { authenticate } from '../middleware/auth.js';
-import { validateRequest } from '../middleware/validation.js';
-import { processData } from '../../services/data-processing.js';
+import { auth } from '../middleware/auth.js';
+import { dataProcessing } from '../../services/data-processing.js';
+import { logging } from '../../services/logging.js';
 
 
 function handleGetRequest(endpoint) {

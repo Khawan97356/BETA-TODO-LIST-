@@ -1,6 +1,6 @@
 // storage-read.js
-import { verifyDataIntegrity } from '../structure/data-integrity.js';
-import { loadData } from '../sync/data-loader.js';
+import { dataLoader } from '../../sync/data-loader.js';
+import { checkDataIntegrity } from '../../structure/data-integrity.js';
 
 const storageReadService = (() => {
     // Configuration des constantes
