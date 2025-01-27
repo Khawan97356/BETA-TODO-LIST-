@@ -3,6 +3,33 @@
 import { handleError } from '../../services/error-handling.js';
 import { logAction } from '../../services/logging.js';
 
+
+// frontend-debug/backend/api/middleware/auth.js
+
+export const auth = {
+    // Vérification du token
+    verifyToken: (token) => {
+        if (!token) return false;
+        
+        // Simulation de vérification de token
+        try {
+            return token.startsWith('Bearer ');
+        } catch (error) {
+            return false;
+        }
+    },
+
+    // Vérification des permissions
+    checkPermissions: (user, requiredPermissions) => {
+        if (!user || !requiredPermissions) return false;
+        return true; // Simulation
+    },
+
+    // Génération de token (pour test)
+    generateToken: (userId) => {
+        return `Bearer ${userId}_${Date.now()}`;
+    }
+};
 function authMiddleware() {
     // Configuration des constantes
     const AUTH_CONSTANTS = {

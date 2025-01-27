@@ -19,6 +19,51 @@ function errorHandlingService() {
         CRITICAL: 'critical'
     };
 
+    // frontend-debug/backend/services/error-handling.js
+
+export const errorHandling = {
+    // Types d'erreurs
+    errorTypes: {
+        VALIDATION: 'VALIDATION_ERROR',
+        AUTH: 'AUTHENTICATION_ERROR',
+        NOT_FOUND: 'NOT_FOUND_ERROR',
+        SERVER: 'SERVER_ERROR'
+    },
+
+    // Gestionnaire d'erreurs
+    handleError: (error) => {
+        const timestamp = new Date().toISOString();
+        
+        // Format standard des erreurs
+        return {
+            success: false,
+            error: {
+                type: error.type || 'UNKNOWN_ERROR',
+                message: error.message,
+                timestamp
+            }
+        };
+    },
+
+    // Logger d'erreurs
+    logError: (error) => {
+        console.error([${new Date().toISOString()}] Error:, {
+            type: error.type,
+            message: error.message,
+            stack: error.stack
+        });
+    },
+
+    // Création d'erreur formatée
+    createError: (type, message) => {
+        return {
+            type,
+            message,
+            timestamp: new Date().toISOString()
+        };
+    }
+};
+
     // Gestionnaire principal des erreurs
     function handleError(error, context = {}) {
         const errorDetails = analyzeError(error);

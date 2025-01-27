@@ -16,6 +16,36 @@ function validationMiddleware() {
         INTEGRITY_FAILED: 'DATA_INTEGRITY_CHECK_FAILED'
     };
 
+
+    // frontend-debug/backend/api/middleware/validation.js
+
+export const validation = {
+    // Validation d'ID
+    validateId: (id) => {
+        if (!id) return false;
+        return !isNaN(id) && id > 0;
+    },
+
+    // Validation de requête
+    validateRequest: (request) => {
+        const requiredFields = ['headers', 'params'];
+        return requiredFields.every(field => field in request);
+    },
+
+    // Validation des en-têtes
+    validateHeaders: (headers) => {
+        const required = ['authorization'];
+        return required.every(header => header in headers);
+    },
+
+    // Messages d'erreur
+    errors: {
+        INVALID_ID: 'ID invalide',
+        MISSING_FIELDS: 'Champs requis manquants',
+        INVALID_HEADERS: 'En-têtes invalides'
+    }
+};
+
     // Validation principale des données
     function validateData(data) {
         try {

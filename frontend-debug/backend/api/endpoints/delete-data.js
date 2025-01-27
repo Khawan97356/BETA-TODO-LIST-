@@ -11,6 +11,38 @@ function handleDeleteRequest(endpoint) {
         UNAUTHORIZED: 'UNAUTHORIZED_ACCESS'
     };
 
+    async function deleteEndpoint(request) {
+        const id = request.params.id;
+        
+        // Utilisation de la validation
+        if (!validation.validateId(id)) {
+            return errorHandling.handleError(
+                errorHandling.createError(
+                    errorHandling.errorTypes.VALIDATION,
+                    'ID invalide'
+                )
+            );
+        }
+
+        // Utilisation de l'authentification
+        if (!auth.verifyToken(request.headers.authorization)) {
+            return errorHandling.handleError(
+                errorHandling.createError(
+                    errorHandling.errorTypes.AUTH,
+                    'Token invalide'
+                )
+            );
+        }
+
+        try {
+            return await deleteData(id);
+        } catch (error) {
+            errorHandling.logError(error);
+            return errorHandling.handleError(error);
+        }
+    }
+
+
     // Fonction principale de suppression
     async function deleteData(id) {
         try {
