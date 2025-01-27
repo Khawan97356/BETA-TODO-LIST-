@@ -1,3 +1,110 @@
+// services/logging.js
+
+export const logging = {
+    // Niveaux de log
+    levels: {
+        DEBUG: 'debug',
+        INFO: 'info',
+        WARN: 'warn',
+        ERROR: 'error'
+    },
+
+    // Configuration
+    config: {
+        enabled: true,
+        maxLogs: 1000,
+        storageKey: 'app_logs'
+    },
+
+    // Log principal
+    log: (level, message, data = {}) => {
+        if (!logging.config.enabled) return;
+
+        const logEntry = {
+            timestamp: new Date().toISOString(),
+            level,
+            message,
+            data
+        };
+
+        // Stockage du log
+        logging.store(logEntry);
+
+        // Affichage console selon le niveau
+        switch (level) {
+            case logging.levels.ERROR:
+                console.error(message, data);
+                break;
+            case logging.levels.WARN:
+                console.warn(message, data);
+                break;
+            case logging.levels.INFO:
+                console.info(message, data);
+                break;
+            default:
+                console.log(message, data);
+        }
+    },
+
+    // Méthodes de raccourci
+    debug: (message, data) => logging.log(logging.levels.DEBUG, message, data),
+    info: (message, data) => logging.log(logging.levels.INFO, message, data),
+    warn: (message, data) => logging.log(logging.levels.WARN, message, data),
+    error: (message, data) => logging.log(logging.levels.ERROR, message, data),
+
+    // Stockage des logs
+    store: (logEntry) => {
+        try {
+            const logs = logging.getLogs();
+            logs.push(logEntry);
+
+            // Limite du nombre de logs
+            if (logs.length > logging.config.maxLogs) {
+                logs.shift();
+            }
+
+            localStorage.setItem(
+                logging.config.storageKey,
+                JSON.stringify(logs)
+            );
+        } catch (error) {
+            console.error('Failed to store log:', error);
+        }
+    },
+
+    // Récupération des logs
+    getLogs: () => {
+        try {
+            const storedLogs = localStorage.getItem(logging.config.storageKey);
+            return storedLogs ? JSON.parse(storedLogs) : [];
+        } catch {
+            return [];
+        }
+    },
+
+    // Nettoyage des logs
+    clearLogs: () => {
+        try {
+            localStorage.removeItem(logging.config.storageKey);
+        } catch (error) {
+            console.error('Failed to clear logs:', error);
+        }
+    },
+
+    // Exportation des logs
+    exportLogs: () => {
+        const logs = logging.getLogs();
+        return {
+            logs,
+            metadata: {
+                exportedAt: new Date().toISOString(),
+                totalLogs: logs.length
+            }
+        };
+    }
+};
+
+
 // logging.js
 
 function loggingService() {

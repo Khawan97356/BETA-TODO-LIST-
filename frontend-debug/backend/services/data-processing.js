@@ -1,3 +1,71 @@
+// services/data-processing.js
+
+export const dataProcessing = {
+    // Traitement des données brutes
+    processRawData: (rawData) => {
+        if (!rawData) return null;
+        
+        try {
+            return {
+                processed: true,
+                data: rawData,
+                timestamp: new Date().toISOString()
+            };
+        } catch (error) {
+            throw new Error('Data processing failed');
+        }
+    },
+
+    // Validation des données
+    validateData: (data) => {
+        const required = ['id', 'data', 'lastModified'];
+        return required.every(field => field in data);
+    },
+
+    // Formatage des données
+    formatData: (data) => {
+        return {
+            id: data.id,
+            content: data.data,
+            metadata: {
+                lastModified: data.lastModified,
+                processedAt: new Date().toISOString()
+            }
+        };
+    },
+
+    // Cache des données
+    cache: {
+        data: new Map(),
+        
+        set: (key, value) => {
+            dataProcessing.cache.data.set(key, {
+                value,
+                timestamp: Date.now()
+            });
+        },
+        
+        get: (key) => {
+            const entry = dataProcessing.cache.data.get(key);
+            if (!entry) return null;
+            
+            // Expiration après 5 minutes
+            if (Date.now() - entry.timestamp > 300000) {
+                dataProcessing.cache.data.delete(key);
+                return null;
+            }
+            
+            return entry.value;
+        },
+        
+        clear: () => {
+            dataProcessing.cache.data.clear();
+        }
+    }
+};
+
+
+
 // data-processing.js
 
 import { handleError } from './error-handling.js';

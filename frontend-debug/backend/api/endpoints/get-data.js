@@ -1,7 +1,10 @@
 // get-data.js
+
+// Imports
 import { auth } from '../middleware/auth.js';
 import { dataProcessing } from '../../services/data-processing.js';
 import { logging } from '../../services/logging.js';
+
 
 
 function handleGetRequest(endpoint) {
@@ -10,13 +13,70 @@ function handleGetRequest(endpoint) {
         NOT_FOUND: 'RESOURCE_NOT_FOUND',
         INVALID_REQUEST: 'INVALID_REQUEST',
         STORAGE_ERROR: 'STORAGE_ERROR',
-        PARSE_ERROR: 'PARSE_ERROR'
+        PARSE_ERROR: 'PARSE_ERROR',
+        UNAUTHORIZED: 'UNAUTHORIZED'
     };
 
     const STORAGE_KEYS = {
         DATA_PREFIX: 'app_data_',
         META_PREFIX: 'app_meta_'
     };
+
+    // Nouvelle fonction de vérification d'authentification
+    async function checkAuthentication(request) {
+        try {
+            const authResult = await auth.authenticate(request);
+            if (!authResult.isAuthenticated) {
+                throw new Error(ERROR_CODES.UNAUTHORIZED);
+            }
+            return authResult.session;
+        } catch (error) {
+            logging.error('Authentication failed', { error: error.message });
+            throw new Error(ERROR_CODES.UNAUTHORIZED);
+        }
+    }
+
+        // Modification de getData pour utiliser les services
+        async function getData(params, authSession) {
+            try {
+                validateParams(params);
+                logging.info('getData called', { params });
+    
+                const localData = checkLocalStorage(params.id);
+                if (localData) {
+                    const processedData = dataProcessing.processRawData(localData);
+                    logging.debug('Data retrieved from local storage', { id: params.id });
+                    return {
+                        success: true,
+                        source: 'local_storage',
+                        data: processedData,
+                        timestamp: new Date().toISOString()
+                    };
+                }
+    
+                const serverData = await fetchFromServer(params);
+                const processedServerData = dataProcessing.processRawData(serverData);
+                
+                saveToLocalStorage(params.id, processedServerData);
+                logging.info('Data fetched from server', { id: params.id });
+    
+                return {
+                    success: true,
+                    source: 'server',
+                    data: processedServerData,
+                    timestamp: new Date().toISOString()
+                };
+    
+            } catch (error) {
+                logging.error('getData failed', { error: error.message, params });
+                return {
+                    success: false,
+                    error: error.message,
+                    timestamp: new Date().toISOString()
+                };
+            }
+        }
+    
 
     // Fonction principale de récupération des données
     async function getData(params) {

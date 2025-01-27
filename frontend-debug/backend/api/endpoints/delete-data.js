@@ -42,7 +42,6 @@ function handleDeleteRequest(endpoint) {
         }
     }
 
-
     // Fonction principale de suppression
     async function deleteData(id) {
         try {
