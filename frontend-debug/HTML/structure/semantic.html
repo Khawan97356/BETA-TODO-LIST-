@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vérification Sémantique - Todo List</title>
+
+    <!-- Lien vers le fichier JavaScript -->
+
+    <script src="../../JavaScript/compatibility/polyfills.js"></script>
+    <script src="../../JavaScript/compatibility/es6-support.js"></script>
+    <script src="../../JavaScript/compatibility/modern-browsers.js"></script>
+
+    <!-- Lien vers le fichier CSS -->
+    <link rel="stylesheet" href="../../CSS/layout/flexbox-grid.css">
+    <link rel="stylesheet" href="../../CSS/styles/colors-contrast.css">
+
+    <link rel="stylesheet" href="../../CSS/layout/media-queries.css">
+    <link rel="stylesheet" href="../../CSS/styles/animations-transitions.css">
+    
+</head>
+<body>
+    <!-- header: En-tête principal de l'application -->
+    <header>
+        <nav>
+            <!-- nav: Navigation principale -->
+            <ul>
+                <li><a href="#accueil" aria-current="page">Accueil</a></li>
+                <li><a href="#categories">Catégories</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <!-- main: Contenu principal de l'application -->
+    <main>
+        <!-- section: Section pour l'ajout de tâches -->
+        <section aria-labelledby="creation-titre">
+            <h1 id="creation-titre">Créer une nouvelle tâche</h1>
+            
+            <!-- article: Formulaire d'ajout considéré comme une unité de contenu indépendante -->
+            <article>
+                <!-- form: Formulaire sémantique -->
+                <form>
+                    <fieldset>
+                        <legend>Détails de la tâche</legend>
+                        
+                        <div>
+                            <label for="tache-titre">Titre de la tâche</label>
+                            <input type="text" id="tache-titre" required>
+                        </div>
+
+                        <div>
+                            <label for="tache-description">Description</label>
+                            <textarea id="tache-description"></textarea>
+                        </div>
+
+                        <div>
+                            <label for="tache-priorite">Priorité</label>
+                            <select id="tache-priorite">
+                                <option value="basse">Basse</option>
+                                <option value="moyenne">Moyenne</option>
+                                <option value="haute">Haute</option>
+                            </select>
+                        </div>
+                    </fieldset>
+                    <button type="submit">Ajouter la tâche</button>
+                </form>
+            </article>
+        </section>
+
+        <!-- section: Section pour la liste des tâches -->
+        <section aria-labelledby="liste-titre">
+            <h2 id="liste-titre">Mes tâches</h2>
+            
+            <!-- aside: Information complémentaire -->
+            <aside>
+                <p>Statistiques des tâches</p>
+                <ul>
+                    <li><mark>5</mark> tâches en cours</li>
+                    <li><mark>3</mark> tâches terminées</li>
+                </ul>
+            </aside>
+
+            <!-- article: Chaque groupe de tâches -->
+            <article>
+                <h3>Tâches d'aujourd'hui</h3>
+                <!-- figure: Représentation des tâches avec une légende -->
+                <figure>
+                    <figcaption>Liste des tâches prioritaires</figcaption>
+                    <!-- liste des tâches utilisant des éléments sémantiques -->
+                    <ul>
+                        <li>
+                            <article class="tache">
+                                <header>
+                                    <h4>Titre de la tâche</h4>
+                                    <time datetime="2025-01-24">24 Jan 2025</time>
+                                </header>
+                                <details>
+                                    <summary>Détails de la tâche</summary>
+                                    <p>Description détaillée de la tâche à accomplir</p>
+                                </details>
+                                <footer>
+                                    <button type="button">Terminer</button>
+                                    <button type="button">Supprimer</button>
+                                </footer>
+                            </article>
+                        </li>
+                    </ul>
+                </figure>
+            </article>
+        </section>
+    </main>
+
+    <!-- footer: Pied de page de l'application -->
+    <footer>
+        <address>
+            <p>Contact: <a href="mailto:contact@todolist.com">contact@todolist.com</a></p>
+        </address>
+        <small>© 2025 Todo List - Tous droits réservés</small>
+    </footer>
+
+    <!-- Lien vers le fichier JavaScript -->
+    <script src="../../JavaScript/performance/script-loading.js"></script>
+</body>
+</html>

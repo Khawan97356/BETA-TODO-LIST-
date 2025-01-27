@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test des attributs ALT</title>
+
+    <!-- Lien vers le fichier CSS -->
+    <link rel="stylesheet" href="../../CSS/styles/colors-contrast.css">
+</head>
+<body>
+    <main>
+        <h1>Vérification des attributs ALT</h1>
+
+        <!-- 1. Image informative -->
+        <figure>
+            <img src="chemin/vers/votre/image1" alt="Description détaillée de votre image">
+            <figcaption>Légende de l'image</figcaption>
+        </figure>
+
+        <!-- 2. Image décorative -->
+        <img src="chemin/vers/votre/image2" alt="" role="presentation">
+
+        <!-- 3. Image cliquable -->
+        <a href="#">
+            <img src="chemin/vers/votre/image3" alt="Description de la destination du lien">
+        </a>
+
+        <!-- 4. Image complexe avec description longue -->
+        <figure>
+            <img src="chemin/vers/votre/image4" 
+                 alt="Description courte" 
+                 aria-describedby="desc-longue">
+            <figcaption id="desc-longue">
+                Description détaillée de votre image complexe
+            </figcaption>
+        </figure>
+
+        <!-- 5. Groupe d'images -->
+        <div>
+            <img src="chemin/vers/votre/image5a" alt="Description première image">
+            <img src="chemin/vers/votre/image5b" alt="Description deuxième image">
+        </div>
+
+        <!-- Liste de vérification -->
+        <section>
+            <h2>Points à vérifier</h2>
+            <ul>
+                <li>Alt descriptif pour les images informatives</li>
+                <li>Alt vide pour les images décoratives</li>
+                <li>Alt décrivant la destination pour les images-liens</li>
+                <li>Description détaillée pour les images complexes</li>
+                <li>Alt distinct pour chaque image d'un groupe</li>
+            </ul>
+        </section>
+    </main>
+
+</body>
+</html>

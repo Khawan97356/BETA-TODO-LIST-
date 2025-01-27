@@ -1,0 +1,190 @@
+/* === POSITIONS ET Z-INDEX DEBUGGING === */
+
+/* Classes de test pour les positions */
+.position-test {
+    border: 2px solid #333;
+    padding: 10px;
+    margin: 5px;
+    background: rgba(255, 255, 255, 0.9);
+}
+
+/* Test Position Static (défaut) */
+.pos-static {
+    position: static;
+    background-color: #e3f2fd;
+}
+
+/* Test Position Relative */
+.pos-relative {
+    position: relative;
+    top: 20px;
+    left: 20px;
+    background-color: #bbdefb;
+}
+
+/* Test Position Absolute */
+.pos-absolute {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background-color: #90caf9;
+}
+
+/* Test Position Fixed */
+.pos-fixed {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background-color: #64b5f6;
+}
+
+/* Test Position Sticky */
+.pos-sticky {
+    position: sticky;
+    top: 0;
+    background-color: #42a5f5;
+}
+
+/* === Z-INDEX TESTS === */
+
+/* Container pour tests z-index */
+.stacking-context {
+    position: relative;
+    height: 300px;
+    margin: 20px;
+    border: 1px solid #ddd;
+}
+
+/* Niveaux de z-index */
+.z-level-1 {
+    z-index: 1;
+    background-color: rgba(255, 0, 0, 0.5);
+}
+
+.z-level-2 {
+    z-index: 2;
+    background-color: rgba(0, 255, 0, 0.5);
+}
+
+.z-level-3 {
+    z-index: 3;
+    background-color: rgba(0, 0, 255, 0.5);
+}
+
+/* Test de superposition */
+.overlay-test {
+    position: absolute;
+    width: 100px;
+    height: 100px;
+}
+
+/* === CONTEXTES D'EMPILEMENT === */
+
+/* Nouveau contexte d'empilement */
+.new-stacking-context {
+    position: relative;
+    z-index: 1;
+    transform: translateZ(0);
+}
+
+/* Test d'isolation */
+.isolation-test {
+    isolation: isolate;
+}
+
+/* === INDICATEURS DE DÉBOGAGE === */
+
+/* Bordures de débogage */
+.debug .position-test {
+    outline: 2px dashed red;
+}
+
+/* Indicateur de position */
+.position-test::before {
+    content: attr(class);
+    display: block;
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 5px;
+}
+
+/* === TESTS DE CAS SPÉCIAUX === */
+
+/* Test de défilement avec position: sticky */
+.scroll-container {
+    height: 200px;
+    overflow-y: auto;
+    border: 1px solid #ccc;
+}
+
+/* Test de superposition d'éléments fixes */
+.fixed-overlay {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 20px;
+    z-index: 1000;
+}
+
+/* Test de position absolute avec containment */
+.contain-absolute {
+    position: relative;
+    contain: layout;
+    height: 200px;
+    border: 1px solid #999;
+}
+
+/* === UTILITAIRES === */
+
+/* Classes utilitaires pour z-index */
+.z-0 { z-index: 0; }
+.z-10 { z-index: 10; }
+.z-20 { z-index: 20; }
+.z-30 { z-index: 30; }
+.z-40 { z-index: 40; }
+.z-50 { z-index: 50; }
+.z-auto { z-index: auto; }
+
+/* === COMMENTAIRES DE DÉBOGAGE === */
+/*
+Points à vérifier :
+1. Les positions relatives fonctionnent-elles correctement ?
+2. Les éléments absolus sont-ils correctement positionnés par rapport à leur parent ?
+3. Les éléments fixed restent-ils en place pendant le défilement ?
+4. Les éléments sticky se comportent-ils correctement ?
+5. La hiérarchie des z-index est-elle respectée ?
+6. Les nouveaux contextes d'empilement sont-ils créés correctement ?
+7. L'isolation fonctionne-t-elle comme prévu ?
+*/
+
+/* === MEDIA QUERIES POUR POSITIONS === */
+@media screen and (max-width: 768px) {
+    .pos-sticky {
+        position: relative; /* Fallback sur mobile si nécessaire */
+    }
+    
+    .fixed-overlay {
+        width: 90%; /* Ajustement pour mobile */
+    }
+}
+
+/* === PERFORMANCE === */
+/* Optimisation des performances de rendu */
+.gpu-accelerated {
+    transform: translateZ(0);
+    will-change: transform;
+}
+
+/* === RESET === */
+/* Reset pour tests */
+.position-reset {
+    position: static !important;
+    top: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    left: auto !important;
+    z-index: auto !important;
+}

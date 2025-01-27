@@ -1,0 +1,199 @@
+/* === TYPOGRAPHY DEBUGGING === */
+
+/* Variables typographiques de base */
+:root {
+    /* Échelle typographique */
+    --text-xs: 0.75rem;    /* 12px */
+    --text-sm: 0.875rem;   /* 14px */
+    --text-base: 1rem;     /* 16px */
+    --text-lg: 1.125rem;   /* 18px */
+    --text-xl: 1.25rem;    /* 20px */
+    --text-2xl: 1.5rem;    /* 24px */
+    --text-3xl: 1.875rem;  /* 30px */
+    --text-4xl: 2.25rem;   /* 36px */
+    
+    /* Hauteurs de ligne */
+    --leading-none: 1;
+    --leading-tight: 1.25;
+    --leading-normal: 1.5;
+    --leading-relaxed: 1.75;
+    --leading-loose: 2;
+    
+    /* Font stacks sécurisés */
+    --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    --font-serif: Georgia, Cambria, 'Times New Roman', Times, serif;
+    --font-mono: Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+}
+
+/* === CLASSES DE DÉBOGAGE === */
+
+/* Afficher la grille baseline */
+.debug-baseline {
+    background: linear-gradient(rgba(0, 169, 255, 0.1) 1px, transparent 1px);
+    background-size: 100% 1.5rem;
+}
+
+/* Mettre en évidence les problèmes d'espacement */
+.debug-spacing * {
+    outline: 1px solid rgba(255, 0, 0, 0.2);
+}
+
+/* Test de lisibilité de largeur de ligne */
+.debug-measure {
+    max-width: 65ch; /* Largeur optimale pour la lecture */
+    background-color: rgba(0, 255, 0, 0.1);
+}
+
+/* === STYLES DE BASE === */
+
+/* Test de taille de police minimale */
+html {
+    font-size: 16px; /* Taille de base recommandée */
+    font-family: var(--font-sans);
+}
+
+/* Test de ratio pour les titres */
+h1 {
+    font-size: var(--text-4xl);
+    line-height: var(--leading-tight);
+    margin-bottom: 1em;
+}
+
+h2 {
+    font-size: var(--text-3xl);
+    line-height: var(--leading-tight);
+    margin-bottom: 0.75em;
+}
+
+h3 {
+    font-size: var(--text-2xl);
+    line-height: var(--leading-normal);
+    margin-bottom: 0.5em;
+}
+
+/* === CLASSES DE TEST === */
+
+/* Test de lisibilité */
+.readability-test {
+    font-family: var(--font-serif);
+    line-height: var(--leading-relaxed);
+    font-size: var(--text-base);
+}
+
+/* Test d'espacement des paragraphes */
+.paragraph-spacing-test p {
+    margin-bottom: 1.5em;
+}
+
+/* Test de hiérarchie visuelle */
+.hierarchy-test h1 {
+    font-weight: 700;
+}
+
+.hierarchy-test h2 {
+    font-weight: 600;
+}
+
+.hierarchy-test h3 {
+    font-weight: 500;
+}
+
+/* === CLASSES D'UTILITÉ === */
+
+/* Tailles de police */
+.text-xs { font-size: var(--text-xs); }
+.text-sm { font-size: var(--text-sm); }
+.text-base { font-size: var(--text-base); }
+.text-lg { font-size: var(--text-lg); }
+.text-xl { font-size: var(--text-xl); }
+
+/* Styles de texte */
+.font-bold { font-weight: 700; }
+.font-semibold { font-weight: 600; }
+.font-normal { font-weight: 400; }
+.font-light { font-weight: 300; }
+
+.italic { font-style: italic; }
+.uppercase { text-transform: uppercase; }
+.lowercase { text-transform: lowercase; }
+.capitalize { text-transform: capitalize; }
+
+/* Alignement */
+.text-left { text-align: left; }
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+.text-justify { text-align: justify; }
+
+/* === RESPONSIVE TYPOGRAPHY === */
+
+@media (max-width: 640px) {
+    html {
+        font-size: 14px; /* Réduction pour mobile */
+    }
+    
+    .debug-measure {
+        max-width: 100%;
+    }
+}
+
+/* === TESTS SPÉCIFIQUES === */
+
+/* Test de lisibilité des liens */
+.link-test a {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+/* Test d'espacement des listes */
+.list-test ul, 
+.list-test ol {
+    margin-left: 1.5em;
+    line-height: var(--leading-normal);
+}
+
+/* Test de césure */
+.hyphenation-test {
+    hyphens: auto;
+    text-align: justify;
+}
+
+/* === UTILITAIRES DE DÉBOGAGE === */
+
+/* Vérification des marges */
+.margin-debug > * {
+    outline: 1px dashed blue;
+}
+
+/* Vérification des lignes de base */
+.baseline-debug {
+    position: relative;
+}
+
+.baseline-debug::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: repeating-linear-gradient(
+        to bottom,
+        rgba(0, 0, 255, 0.1),
+        rgba(0, 0, 255, 0.1) 1px,
+        transparent 1px,
+        transparent 1.5rem
+    );
+    pointer-events: none;
+}
+
+/* === COMMENTAIRES DE DÉBOGAGE === */
+/*
+Points à vérifier :
+1. Les tailles de police sont-elles cohérentes ?
+2. La hiérarchie typographique est-elle claire ?
+3. Les espacements sont-ils réguliers ?
+4. Le texte est-il lisible sur mobile ?
+5. Les lignes ont-elles une longueur optimale ?
+6. Les marges et paddings sont-ils cohérents ?
+7. La typographie est-elle responsive ?
+*/

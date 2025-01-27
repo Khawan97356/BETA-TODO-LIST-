@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vérification Hiérarchie - Todo List</title>
+
+    <!-- Lien vers le fichier JavaScript -->
+    <script src="../../JavaScript/compatibility/polyfills.js"></script>
+    <script src="../../JavaScript/compatibility/es6-support.js"></script>
+    <script src="../../JavaScript/compatibility/modern-browsers.js"></script>
+
+    <!-- Lien vers le fichier CSS -->
+    <link rel="stylesheet" href="../../CSS/layout/positions-zindex.css">
+    <link rel="stylesheet" href="../../CSS/layout/flexbox-grid.css">
+
+    
+    <link rel="stylesheet" href="../../CSS/layout/media-queries.css">
+    <link rel="stylesheet" href="../../CSS/styles/animations-transitions.css">
+    
+    
+</head>
+<body>
+    <!-- Premier niveau : Structure principale -->
+    <div class="container">
+        <!-- Deuxième niveau : En-tête -->
+        <header role="banner">
+            <h1>Todo List</h1>
+            <nav role="navigation">
+                <ul>
+                    <li><a href="#todos">Mes tâches</a></li>
+                    <li><a href="#new-todo">Nouvelle tâche</a></li>
+                </ul>
+            </nav>
+        </header>
+
+        <!-- Deuxième niveau : Contenu principal -->
+        <main role="main">
+            <!-- Troisième niveau : Section nouvelle tâche -->
+            <section id="new-todo">
+                <h2>Ajouter une tâche</h2>
+                <form>
+                    <fieldset>
+                        <legend>Nouvelle tâche</legend>
+                        <div class="form-group">
+                            <label for="task-input">Description de la tâche</label>
+                            <input type="text" id="task-input" required>
+                        </div>
+                        <button type="submit">Ajouter</button>
+                    </fieldset>
+                </form>
+            </section>
+
+            <!-- Troisième niveau : Section liste des tâches -->
+            <section id="todos">
+                <h2>Mes tâches</h2>
+                <article class="todo-list">
+                    <ul>
+                        <!-- Quatrième niveau : Items individuels -->
+                        <li class="todo-item">
+                            <div class="todo-content">
+                                <input type="checkbox" id="task1">
+                                <label for="task1">Tâche exemple</label>
+                            </div>
+                            <div class="todo-actions">
+                                <button type="button">Modifier</button>
+                                <button type="button">Supprimer</button>
+                            </div>
+                        </li>
+                    </ul>
+                </article>
+            </section>
+        </main>
+
+        <!-- Deuxième niveau : Pied de page -->
+        <footer role="contentinfo">
+            <p>© 2025 Todo List</p>
+        </footer>
+    </div>
+
+    <!-- Liens JavaScript -->
+    <script src="../../JavaScript/features/dom-manipulation.js"></script>
+</body>
+</html>

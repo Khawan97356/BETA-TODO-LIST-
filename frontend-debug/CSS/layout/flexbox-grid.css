@@ -1,0 +1,156 @@
+/* === FLEXBOX DEBUGGING === */
+
+/* Test de base Flexbox */
+.flex-container {
+    display: flex;
+    background: #f0f0f0;
+    margin: 10px 0;
+    padding: 10px;
+    min-height: 100px;
+}
+
+/* Test direction Flexbox */
+.flex-direction-test {
+    display: flex;
+    /* Vérifier si la direction fonctionne correctement */
+    flex-direction: row; /* Tester aussi: column, row-reverse, column-reverse */
+}
+
+/* Test wrap Flexbox */
+.flex-wrap-test {
+    display: flex;
+    flex-wrap: wrap; /* Vérifier si les éléments passent bien à la ligne */
+    gap: 10px;
+}
+
+/* Test justify-content */
+.justify-test {
+    display: flex;
+    justify-content: space-between; /* Tester: flex-start, center, flex-end, space-around */
+}
+
+/* Test align-items */
+.align-test {
+    display: flex;
+    height: 200px;
+    align-items: center; /* Tester: flex-start, flex-end, stretch, baseline */
+}
+
+/* Test flex-grow et flex-shrink */
+.flex-item {
+    flex: 1 1 auto; /* grow shrink basis */
+    padding: 10px;
+    margin: 5px;
+    background: #ddd;
+}
+
+/* === GRID DEBUGGING === */
+
+/* Test de base Grid */
+.grid-container {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr); /* Test colonnes égales */
+    gap: 10px;
+    padding: 10px;
+    background: #f0f0f0;
+}
+
+/* Test Grid Areas */
+.grid-areas-test {
+    display: grid;
+    grid-template-areas:
+        "header header header"
+        "sidebar main main"
+        "footer footer footer";
+    gap: 10px;
+}
+
+/* Test Grid auto-fill/auto-fit */
+.grid-responsive {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 10px;
+}
+
+/* Test Grid alignement */
+.grid-alignment {
+    display: grid;
+    justify-items: center; /* Tester: start, end, stretch */
+    align-items: center; /* Tester: start, end, stretch */
+}
+
+/* === TESTS COMBINÉS === */
+
+/* Test Flexbox dans Grid */
+.grid-flex-combo {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+}
+
+.grid-flex-combo > div {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* === CLASSES DE DÉBOGAGE === */
+
+/* Bordures pour visualiser les conteneurs */
+.debug {
+    border: 1px solid red;
+}
+
+.debug-item {
+    border: 1px solid blue;
+}
+
+/* Classes pour tester les gaps */
+.gap-test {
+    gap: 20px;
+}
+
+/* === MEDIA QUERIES DE TEST === */
+
+@media (max-width: 768px) {
+    .grid-container {
+        grid-template-columns: 1fr 1fr; /* Passe à 2 colonnes */
+    }
+}
+
+@media (max-width: 480px) {
+    .grid-container {
+        grid-template-columns: 1fr; /* Passe à 1 colonne */
+    }
+    
+    .flex-direction-test {
+        flex-direction: column; /* Passe en colonne */
+    }
+}
+
+/* === CLASSES UTILITAIRES === */
+
+/* Espacements */
+.gap-sm { gap: 5px; }
+.gap-md { gap: 10px; }
+.gap-lg { gap: 20px; }
+
+/* Alignements */
+.justify-start { justify-content: flex-start; }
+.justify-center { justify-content: center; }
+.justify-end { justify-content: flex-end; }
+
+/* Flexibilité */
+.flex-1 { flex: 1; }
+.flex-2 { flex: 2; }
+.flex-3 { flex: 3; }
+
+/* === COMMENTAIRES DE DÉBOGAGE === */
+/*
+Points à vérifier :
+1. Les flex-containers s'adaptent-ils correctement ?
+2. Les éléments flex se redimensionnent-ils comme prévu ?
+3. L'alignement vertical et horizontal fonctionne-t-il ?
+4. La grille est-elle responsive ?
+5. Les gaps sont-ils uniformes ?
+6. Les nested flexbox/grid fonctionnent-ils ?
+*/
