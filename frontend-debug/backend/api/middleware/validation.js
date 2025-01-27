@@ -53,6 +53,18 @@ export const validation = {
             const jsonValidation = validateJSON(data);
             if (!jsonValidation.isValid) {
                 throw new Error(ERROR_CODES.JSON_INVALID);
+            } catch (error) {
+                handleError(error); // Ajout de handleError
+            updateValidationMonitor({
+                action: 'validation_error',
+                error: error.message,
+                timestamp: new Date().toISOString()
+            });
+
+            return {
+                isValid: false,
+                error: error.message
+            };
             }
 
             // Vérification des clés
@@ -106,8 +118,7 @@ export const validation = {
             JSON.parse(JSON.stringify(data));
             return { isValid: true };
         } catch (error) {
-            return { 
-                isValid: false,
+            return { isValid: false,
                 error: ERROR_CODES.JSON_INVALID
             };
         }
@@ -211,6 +222,7 @@ export const validation = {
             dispatchValidationEvent('validation_update', info);
 
         } catch (error) {
+            handleError(error);
             console.warn('Failed to update validation monitor:', error);
         }
     }
@@ -236,6 +248,7 @@ export const validation = {
                 errorCodes: ERROR_CODES
             };
         } catch (error) {
+            handleError(error);
             return {
                 error: 'Failed to retrieve validation debug info',
                 timestamp: new Date().toISOString()

@@ -13,7 +13,8 @@ function handleSaveRequest(endpoint) {
         STORAGE_FULL: 'STORAGE_CAPACITY_EXCEEDED',
         INTEGRITY_ERROR: 'DATA_INTEGRITY_ERROR',
         SAVE_ERROR: 'SAVE_OPERATION_FAILED',
-        KEY_ERROR: 'INVALID_KEY_FORMAT'
+        KEY_ERROR: 'INVALID_KEY_FORMAT',
+        UNAUTHORIZED: 'UNAUTHORIZED_ACCESS'
     };
 
     const STORAGE_CONFIG = {
@@ -21,10 +22,44 @@ function handleSaveRequest(endpoint) {
         KEY_PREFIX: 'app_data_',
         VERSION: '1.0'
     };
-
+    
+        // Vérification de l'authentification
+        async function checkAuthentication(request) {
+            try {
+                const authResult = await auth.authenticate(request);
+                if (!authResult.isAuthenticated) {
+                    throw new Error(ERROR_CODES.UNAUTHORIZED);
+                }
+                return authResult.session;
+            } catch (error) {
+                logging.error('Authentication failed', { error: error.message });
+                throw errorHandling.createError(ERROR_CODES.UNAUTHORIZED, 'Authentication required');
+            }
+    
     // Fonction principale de sauvegarde
-    async function saveData(data) {
+    async function saveData(data, authSession) {
         try {
+            logging.info('Starting save operation', { useerId: authSession.userId });
+
+             // Validation avec le service de validation
+             validation.validateRequest({
+                body: data,
+                required: ['id', 'content'],
+                types: {
+                    id: 'string',
+                    content: 'object'
+                }
+            });
+
+            // Traitement des données
+            const processedData = dataProcessing.processRawData(data);
+            
+            // Validation de la structure
+            validateDataStructure(processedData);
+            
+            // Préparation avec métadonnées d'authentification
+            const preparedData = prepareDataForStorage(processedData, authSession);
+
             // Validation préliminaire
             validateDataStructure(data);
             
@@ -38,7 +73,9 @@ function handleSaveRequest(endpoint) {
             const savedData = await performSave(preparedData);
             
             // Mise à jour du moniteur de stockage
-            updateStorageMonitor(preparedData);
+            updateStorageMonitor(preparedData, authSession);
+
+            logging.info('Save operation successful', { userId: authSession.userId, dataId: data.id });
 
             return {
                 success: true,
@@ -48,12 +85,15 @@ function handleSaveRequest(endpoint) {
             };
 
         } catch (error) {
+            logging.error('Save operation failed', { error: error.message, userId: authSession.userId });
             return {
                 success: false,
                 error: error.message,
                 errorDetails: error.details || {},
                 timestamp: new Date().toISOString()
             };
+
+            return errorHandling.handleError(error, {operation: 'save', userId: authSession.userId});
         }
     }
 
@@ -84,12 +124,14 @@ function handleSaveRequest(endpoint) {
     }
 
     // Préparation des données pour le stockage
-    function prepareDataForStorage(data) {
+    function prepareDataForStorage(data, authSession) {
         return {
             ...data,
             _meta: {
                 version: STORAGE_CONFIG.VERSION,
                 createdAt: new Date().toISOString(),
+                createdBy: authSession.userId,
+                userRole: authSession.userRole,
                 checksum: generateChecksum(data)
             }
         };
@@ -137,20 +179,39 @@ function handleSaveRequest(endpoint) {
     }
 
     // Mise à jour du moniteur de stockage
-    function updateStorageMonitor(data) {
+    function updateStorageMonitor(data, authSession) {
         try {
             const monitorKey = 'storage_monitor';
             const monitor = JSON.parse(localStorage.getItem(monitorKey) || '{}');
+
+            const operation = {
+                type: 'save',
+                id: data.id,
+                timestamp: new Date().toISOString(),
+                user:{
+                    id: authSession.userId,
+                    role: authSession.role
+                }
+            };
             
             monitor.lastUpdate = new Date().toISOString();
             monitor.operations = (monitor.operations || 0) + 1;
-            monitor.lastOperation = {
-                type: 'save',
-                id: data.id,
-                timestamp: new Date().toISOString()
-            };
+            monitor.lastOperation = operation; 
+
+             // Ajout de l'historique des opérations
+             monitor.history = monitor.history || [];
+             monitor.history.unshift(operation);
+             
+             // Limite de l'historique à 50 entrées
+             if (monitor.history.length > 50) {
+                 monitor.history.pop();
+             }
+ 
 
             localStorage.setItem(monitorKey, JSON.stringify(monitor));
+
+            logging.debug('Storage monitor updated', { operation });
+
         } catch (error) {
             console.warn('Failed to update storage monitor:', error);
         }
@@ -180,16 +241,49 @@ function handleSaveRequest(endpoint) {
     }
 
     // Point d'entrée de l'API
-    async function saveEndpoint(request) {
-        const data = request.body;
-        return await saveData(data);
-    }
+    async function saveEndpoint(request) 
+    try {
+         // Vérification de l'authentification
+         const authSession = await checkAuthentication(request);
 
-    return {
-        saveEndpoint,
-        ERROR_CODES,
-        getStorageInfo
-    };
+         // Validation de la requête
+         validation.validateRequest(request);
+
+         // Sauvegarde avec session d'authentification
+         return await saveData(request.body, authSession);
+
+     } catch (error) {
+         logging.error('Save endpoint error', { error: error.message });
+         return errorHandling.handleError(error);
+     }
+ }
+
+ // Interface de débogage améliorée
+ function getDebugInfo() {
+     try {
+         const storageInfo = getStorageInfo();
+         const monitor = JSON.parse(localStorage.getItem('storage_monitor') || '{}');
+
+         return {
+             storageInfo,
+             monitor,
+             auth: auth.getAuthDebugInfo(),
+             timestamp: new Date().toISOString()
+         };
+     } catch (error) {
+         logging.error('Debug info collection failed', { error: error.message });
+         return errorHandling.handleError(error);
+     }
+ }
+
+ // Export des fonctionnalités
+ return {
+     saveEndpoint,
+     ERROR_CODES,
+     getStorageInfo,
+     getDebugInfo
+ };
 }
+
 
 export default handleSaveRequest;

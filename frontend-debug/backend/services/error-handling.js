@@ -66,11 +66,14 @@ export const errorHandling = {
 
     // Gestionnaire principal des erreurs
     function handleError(error, context = {}) {
-        const errorDetails = analyzeError(error);
+        const errorDetails = error.type ? error : createError(determineErrorType(error),error.message || 'Unknown error');
         const enrichedError = enrichErrorData(errorDetails, context);
         
         // Log de l'erreur
-        logError(enrichedError);
+        logError({
+            type: enrichedError.type,
+            message: enrichedError.message,
+            details: enrichedError});
 
         // Notification du système de monitoring
         notifyMonitor(enrichedError);
@@ -79,6 +82,7 @@ export const errorHandling = {
         const recovery = attemptRecovery(enrichedError);
 
         return {
+            success: false,
             error: enrichedError,
             handled: true,
             recovery,
@@ -210,9 +214,17 @@ export const errorHandling = {
             // Émission d'événement pour le moniteur
             dispatchErrorEvent('error_logged', error);
 
+            logError({
+                type: 'LOCAL_LOG', message: 'Error logged locally',
+                error
+            });
+
         } catch (logError) {
             console.error('Failed to log error:', logError);
-        }
+            logError({
+                type: 'LOCAL_FAILURE', message: 'Failed to log locally',
+                error
+            });
     }
 
     // Notification du moniteur
@@ -249,14 +261,23 @@ export const errorHandling = {
 
     // Actions de récupération spécifiques
     function cleanupStorage() {
+        try {
         const nonEssentialKeys = Object.keys(localStorage)
             .filter(key => !key.startsWith('essential_'));
         
         nonEssentialKeys.forEach(key => localStorage.removeItem(key));
         return { success: true, action: 'storage_cleaned' };
+    } catch (error) {
+        logError({
+            type: ERROR_TYPES.STORAGE,
+            message: 'Failed to clean storage',
+            error
+        });
+        return { success: false, error: error.message };
     }
 
     function repairDataIntegrity() {
+        try {
         const corruptedData = [];
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
@@ -269,12 +290,29 @@ export const errorHandling = {
 
         corruptedData.forEach(key => localStorage.removeItem(key));
         return { success: true, repairedItems: corruptedData.length };
+    } catch (error) {
+        logError({
+            type: ERROR_TYPES.INTEGRITY,
+            message: 'Failed to repair data integrity',
+            error
+        });
+        return { success: false, error: error.message };
+    }
     }
 
     function resyncData() {
+        try {
         const syncEvent = new CustomEvent('storage_sync_required');
         window.dispatchEvent(syncEvent);
         return { success: true, action: 'sync_triggered' };
+    } catch (error) {
+        logError({
+            type: ERROR_TYPES.SYNC,
+            message: 'Failed to trigger sync',
+            error
+        });
+        return { success: false, error: error.message };
+    }
     }
 
     // Génération d'une empreinte unique pour l'erreur
@@ -286,8 +324,9 @@ export const errorHandling = {
     // Interface publique
     return {
         handleError,
+        createError,
         getErrorLog: () => JSON.parse(localStorage.getItem('error_log') || '[]'),
-        ERROR_TYPES,
+        ERROR_TYPES: errorTypes,
         ERROR_SEVERITY
     };
 }

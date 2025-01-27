@@ -29,6 +29,35 @@ const storageSaveService = (() => {
     };
 
     /**
+     * Validation étendue des clés
+     * @param {string} key - Clé à valider
+     * @returns {boolean} Résultat de la validation
+     */
+    function validateKey(key) {
+        return validateKeys.isValidKey(key) && key.length <= SAVE_CONFIG.MAX_KEY_LENGTH;
+    }
+
+    /**
+     * Configuration de l'auto-sauvegarde
+     * @param {Object} options - Options d'auto-sauvegarde
+     */
+    function setupAutoSave(options = {}) {
+        autoSave.configure({
+            interval: options.interval || 5000,
+            maxAttempts: options.maxAttempts || SAVE_CONFIG.RETRY_ATTEMPTS,
+            onSave: async (key, data) => {
+                try {
+                    await saveItem(key, data, { createBackup: true });
+                    return true;
+                } catch (error) {
+                    console.error('Auto-save failed:', error);
+                    return false;
+                }
+            }
+        });
+    }
+
+    /**
      * Sauvegarde d'un élément avec validation et compression
      * @param {string} key - Clé de l'élément
      * @param {any} data - Données à sauvegarder
@@ -40,7 +69,8 @@ const storageSaveService = (() => {
             compress = true,
             validate = true,
             checkIntegrity = true,
-            createBackup = true
+            createBackup = true,
+            enableAutoSave = true
         } = options;
 
         try {
@@ -73,11 +103,41 @@ const storageSaveService = (() => {
                 await createBackupBeforeSave(key);
             }
 
+            if (enableAutoSave) {
+                autoSave.register(key, processedData);
+            }
+
             // Tentative de sauvegarde avec retry
             const result = await retryOperation(() => {
                 localStorage.setItem(key, processedData);
                 return true;
             });
+
+            if (validate) {
+                const savedData = localStorage.getItem(key);
+                if (!validateJSON(savedData)) {
+                    throw new Error(SAVE_ERRORS.VALIDATION_FAILED);
+                }
+            }
+
+            logSaveOperation(key, true);
+
+            // Notification du changement
+            notifyStorageChange('save', { key, size: processedData.length });
+
+            return {
+                success: true,
+                key,
+                size: processedData.length,
+                compressed: processedData !== jsonData,
+                timestamp: new Date().toISOString(),
+                autoSaveEnabled: enableAutoSave
+            };
+                } catch (error) {
+            logSaveOperation(key, false, error.message);
+            throw error;
+        }
+    }
 
             // Vérification d'intégrité post-sauvegarde
             if (checkIntegrity) {
@@ -152,18 +212,31 @@ const storageSaveService = (() => {
             failed: []
         };
 
+        // Validation des clés avant le traitement par lots
+        const invalidKeys = items.filter(item => !validateKey(item.key));
+        if (invalidKeys.length > 0) {
+            throw new Error(`Invalid keys found: ${invalidKeys.map(item => item.key).join(', ')}`);
+        }
+
         // Traitement par lots
         for (let i = 0; i < items.length; i += SAVE_CONFIG.BATCH_SIZE) {
             const batch = items.slice(i, i + SAVE_CONFIG.BATCH_SIZE);
             
             await Promise.all(batch.map(async ({ key, data }) => {
                 try {
-                    const result = await saveItem(key, data, options);
+                    const result = await saveItem(key, data, {...options,
+                        enableAutoSave: options.enableAutoSave && autoSave.isSupported
+                });
                     results.success.push({ key, result });
                 } catch (error) {
                     results.failed.push({ key, error: error.message });
                 }
             }));
+
+            // Syncronisation de l'auto-sauvegarde apres chaque lot
+            if (options.enableAutoSave) {
+                await autoSave.syncAll();
+            }
         }
 
         // Log du résultat global
@@ -270,7 +343,9 @@ const storageSaveService = (() => {
     return {
         saveItem,
         batchSave,
+        setupAutoSave,
         getSaveLogs: () => JSON.parse(localStorage.getItem(SAVE_CONFIG.SAVE_LOG_KEY) || '[]'),
+        validateKey,
         SAVE_ERRORS,
         SAVE_CONFIG
     };

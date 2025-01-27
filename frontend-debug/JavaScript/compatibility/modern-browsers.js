@@ -9,6 +9,7 @@ class ModernBrowserChecker {
     constructor() {
         this.browserFeatures = new Map();
         this.warnings = [];
+        this.polyfillsManager = new PolyfillsManager();
         this.initializeFeatureTests();
     }
 
@@ -157,7 +158,9 @@ class ModernBrowserChecker {
                     categoryResults.supported.push(feature);
                 } else {
                     categoryResults.unsupported.push(feature);
-                    this.warnings.push(${feature} n'est pas supporté dans ce navigateur);
+                    this.warnings.push("${feature} n'est pas supporté dans ce navigateur");
+
+                    PolyfillUtils.loadPolyfill(feature);
                 }
             });
 
@@ -225,7 +228,8 @@ class ModernBrowserChecker {
             featureSupport: compatibility.features,
             security,
             warnings: compatibility.warnings,
-            recommendations: compatibility.recommendations
+            recommendations: compatibility.recommendations,
+            polyfillsStatus: PolyfillUtils.getPolyfillsStatus()
         };
     }
 }
@@ -234,6 +238,9 @@ class ModernBrowserChecker {
 const BrowserCompatUtils = {
     // Détection du support des fonctionnalités spécifiques
     detectFeature(feature) {
+        if (PolyfillUtils.isPolyfilled(feature)) {
+            return true;
+        }
         const features = {
             webp: () => {
                 const canvas = document.createElement('canvas');
@@ -261,7 +268,7 @@ const BrowserCompatUtils = {
     // Polyfill conditionnel
     conditionalPolyfill(feature, polyfill) {
         if (!this.detectFeature(feature)) {
-            return polyfill();
+            return PolyfillUtils.applyPolyfill(feature, polyfill);
         }
         return true;
     }

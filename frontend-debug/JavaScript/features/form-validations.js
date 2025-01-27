@@ -4,6 +4,9 @@
 import { DOMManipulationTester, DOMPerformanceChecker } from './dom-manipulation.js';
 import { CodeOptimizer, OptimizationUtils } from '../performance/code-optimization.js';
 
+
+
+
 // Classe principale de validation de formulaire
 class FormValidator {
     constructor(form) {
@@ -11,32 +14,125 @@ class FormValidator {
         this.errors = new Map();
         this.customValidators = new Map();
         this.validateOnInput = true;
+        this.domTester = new DOMManipulationTester();
+        this.DOMPerformanceChecker = DOMPerformanceChecker;
         this.setupValidation();
     }
 
+    // Amélioration des validateurs communs avec des optimisations
+const CommonValidators = {
+    email: OptimizationUtils.memoize((value) => {
+        const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
+        return emailRegex.test(value);
+    }),
+    
+    password: OptimizationUtils.memoize((value) => {
+        const hasUpperCase = /[A-Z]/.test(value);
+        const hasLowerCase = /[a-z]/.test(value);
+        const hasNumbers = /\d/.test(value);
+        const hasSpecialChar = /[!@#$%^&*]/.test(value);
+        return hasUpperCase && hasLowerCase && hasNumbers && hasSpecialChar;
+    }),
+    
+    phone: OptimizationUtils.memoize((value) => {
+        const phoneRegex = /^\+?[\d\s-]{10,}$/;
+        return phoneRegex.test(value);
+    }),
+    
+    date: OptimizationUtils.memoize((value) => {
+        const date = new Date(value);
+        return date instanceof Date && !isNaN(date);
+    }),
+    
+    url: OptimizationUtils.memoize((value) => {
+        try {
+            new URL(value);
+            return true;
+        } catch {
+            return false;
+        }
+    })
+};
+
     // Configuration initiale
     setupValidation() {
-        this.form.noValidate = true; // Désactive la validation HTML5 native
-        this.form.addEventListener('submit', (e) => this.handleSubmit(e));
-        
-        if (this.validateOnInput) {
-            this.form.addEventListener('input', (e) => this.handleInput(e));
-            this.form.addEventListener('blur', (e) => this.handleBlur(e), true);
-        }
+        OptimizationUtils.debounce(() => {
+            this.form.noValidate = true; // Désactive la validation HTML5 native
+            this.form.addEventListener('submit', (e) => this.handleSubmit(e)); 
+
+            if (this.validateOnInput) {
+                this.form.addEventListener('input', (e) => this.handleInput(e));
+                this.form.addEventListener('blur', (e) => this.handleBlur(e), true);
+            }
+        } , 100);
+
+        this.domTester.takeSnapshot(this.form, 'initial');
+            
     }
 
     // Gestion de la soumission
     handleSubmit(event) {
         event.preventDefault();
+
+        this.performanceChecker.measure(() => {
         this.validateForm();
+        } , 'form-validate');
         
         if (this.errors.size === 0) {
             console.log('Form is valid, ready to submit', this.getFormData());
+
+            const changes = this.domTester.compareWithSnapshot(this.form, 'initial');
+            console.log('DOM changes:', changes);
         } else {
             this.displayErrors();
             console.warn('Form validation failed:', Array.from(this.errors.entries()));
         }
     }
+
+    validateField(field) {
+        return this.performanceChecker.measure(() => {
+            const fieldName = field.name;
+            this.errors.delete(fieldName);
+
+            this.domTester.takeSnapshot(field, '${fieldName}-before');
+
+            // Validation des attributs HTML5
+            if (!field.checkValidity()) {
+                this.errors.set(fieldName, this.getValidationMessage(field));
+                return false;
+            }
+
+            this.updateFieldUI(field, true);
+
+            const changes = this.domTester.compareWithSnapshot(field, '${fieldName}-before');
+
+            console.log('DOM changes:', changes);
+
+            return true;
+        }, `validate-${fieldName}`);
+            // Validateurs personnalis
+        }
+
+        updateFieldUI(field, isValid) {
+            // Optimiser les manipulations DOM
+            CodeOptimizer.batchDOMUpdates(() => {
+                const errorElement = this.getErrorElement(field);
+                
+                if (isValid) {
+                    field.classList.remove('invalid');
+                    field.classList.add('valid');
+                    if (errorElement) errorElement.style.display = 'none';
+                } else {
+                    field.classList.remove('valid');
+                    field.classList.add('invalid');
+                    if (errorElement) {
+                        errorElement.textContent = this.errors.get(field.name);
+                        errorElement.style.display = 'block';
+                    }
+                }
+            });
+        }
+
 
     // Validation à la saisie
     handleInput(event) {

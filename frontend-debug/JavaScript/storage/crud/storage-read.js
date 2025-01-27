@@ -1,6 +1,7 @@
 // storage-read.js
 import { dataLoader } from '../../sync/data-loader.js';
 import { checkDataIntegrity } from '../../structure/data-integrity.js';
+import { data } from 'autoprefixer';
 
 const storageReadService = (() => {
     // Configuration des constantes
@@ -27,6 +28,38 @@ const storageReadService = (() => {
     };
 
     /**
+     * Vérifie l'intégrité des données
+     * @param {string} key - Clé de l'élément
+     * @param {string} value - Valeur de l'élément
+     * @returns {Promise<boolean>} Résultat de la vérification
+     */
+    async function verifyDataIntegrity(key, value) {
+        try {
+            const integrityResult = await checkDataIntegrity(value);
+            return integrityResult.isValid;
+        } catch (error) {
+            console.error('Integrity check error:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Validation et synchronisation des données
+     * @param {string} key - Clé à valider
+     * @returns {Promise<boolean>} Résultat de la validation
+     */
+    async function validateAndSync(key) {
+        try {
+            // Vérifie si une synchronisation est nécessaire
+            await dataLoader.checkSync(key);
+            return true;
+        } catch (error) {
+            console.warn('Sync validation failed:', error);
+            return false;
+        }
+    }
+
+    /**
      * Lecture d'un élément avec validation et cache
      * @param {string} key - Clé à lire
      * @param {Object} options - Options de lecture
@@ -37,7 +70,8 @@ const storageReadService = (() => {
             useCache = true,
             validateData = true,
             checkIntegrity = true,
-            timeout = READ_CONFIG.TIMEOUT
+            timeout = READ_CONFIG.TIMEOUT,
+            syncRead = false
         } = options;
 
         try {
@@ -55,9 +89,15 @@ const storageReadService = (() => {
                 };
             }
 
-            // Lecture avec timeout
-            const data = await readWithTimeout(key, timeout);
+            // Synchronisation si demandée
+            let data;
+            if (syncRead) {
+                await validateAndSync(key);
+            } else {
+                data = await readWithTimeout(key, timeout);
+            }
 
+            if (data === null) {
             // Validation JSON si demandée
             if (validateData && !validateJSON(data)) {
                 throw new Error(READ_ERRORS.PARSE_ERROR);
@@ -79,7 +119,7 @@ const storageReadService = (() => {
 
             return {
                 data: JSON.parse(data),
-                source: 'storage',
+                source: syncRead ? 'sync' : 'storage',
                 timestamp: new Date().toISOString()
             };
 
@@ -129,6 +169,11 @@ const storageReadService = (() => {
             failed: []
         };
 
+        // Vérification initiale des données
+        if (options.syncRead) {
+            await dataLoader.batchSync(keys);
+        }
+
         // Traitement par lots
         for (let i = 0; i < keys.length; i += READ_CONFIG.BATCH_SIZE) {
             const batch = keys.slice(i, i + READ_CONFIG.BATCH_SIZE);
@@ -141,6 +186,11 @@ const storageReadService = (() => {
                     results.failed.push({ key, error: error.message });
                 }
             }));
+
+            // Synchronisation apres chaque lot si demandée
+            if (options.syncRead) {
+                await dataLoader.syncChanges();
+            }
         }
 
         // Log du résultat global
@@ -171,8 +221,16 @@ const storageReadService = (() => {
      */
     function updateCache(key, data) {
         try {
-            memoryCache.set(key, JSON.parse(data));
-            cacheTimestamps.set(key, Date.now());
+            const parsedData = JSON.parse(data);
+
+            const isvalid = await checkDataIntegrity(data)
+            if (!isvalid.isValid) {
+                memoryCache.set(key, JSON.parse(data));
+                cacheTimestamps.set(key, Date.now());
+            } else {
+                console.warn('Cache update skipped due to integrity check failure');
+            }
+            
         } catch (error) {
             console.warn('Cache update failed:', error);
         }
@@ -256,6 +314,7 @@ const storageReadService = (() => {
         batchRead,
         clearCache,
         getReadLogs: () => JSON.parse(localStorage.getItem(READ_CONFIG.READ_LOG_KEY) || '[]'),
+        validateAndSync,
         READ_ERRORS,
         READ_CONFIG
     };

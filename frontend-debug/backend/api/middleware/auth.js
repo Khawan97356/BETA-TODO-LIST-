@@ -54,34 +54,44 @@ function authMiddleware() {
                 throw new Error(ERROR_CODES.NO_TOKEN);
             }
 
+            function clearAuthData() {
+                localStorage.removeItem(AUTH_CONSTANTS.TOKEN_KEY);
+                localStorage.removeItem(AUTH_CONSTANTS.SESSION_KEY);
+                updateAuthDebugger({
+                    action: 'clear_auth',
+                    timestamp: new Date().toISOString()
+                });
+                logAction('Auth, data, cleared');
+            } catch (error) {
+                handleError(error); // Utilisation de handleError
+                console.error('Error clearing auth data:', error);
+            }
+        }    
+            
             // Validation du token et récupération des données de session
             const session = await validateAndGetSession(token);
 
             // Mise à jour du moniteur de débogage
-            updateAuthDebugger({
-                action: 'authenticate',
-                token: maskToken(token),
-                timestamp: new Date().toISOString()
-            });
-
-            return {
-                isAuthenticated: true,
-                session: session
-            };
-
-        } catch (error) {
-            updateAuthDebugger({
-                action: 'auth_error',
-                error: error.message,
-                timestamp: new Date().toISOString()
-            });
-
-            return {
-                isAuthenticated: false,
-                error: error.message
-            };
-        }
-    }
+            function updateAuthDebugger(debugInfo) {
+                try {
+                    const currentDebug = JSON.parse(localStorage.getItem(AUTH_CONSTANTS.DEBUG_KEY) || '[]');
+                    currentDebug.push(debugInfo);
+                    
+                    // Garder seulement les 50 dernières entrées
+                    if (currentDebug.length > 50) {
+                        currentDebug.shift();
+                    }
+    
+                    localStorage.setItem(AUTH_CONSTANTS.DEBUG_KEY, JSON.stringify(currentDebug));
+    
+                    // Déclencher un événement pour le moniteur de stockage
+                    dispatchStorageEvent('auth_debug_updated', debugInfo);
+    
+                } catch (error) {
+                    console.warn('Debug logging failed:', error);
+                }
+            }
+               
 
     // Extraction du token de la requête
     function extractToken(request) {

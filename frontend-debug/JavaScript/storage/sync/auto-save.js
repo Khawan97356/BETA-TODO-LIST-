@@ -128,15 +128,66 @@ const autoSaveService = (() => {
         const entries = Array.from(state.queue.entries());
         state.queue.clear();
 
-        for (const [key, data] of entries) {
+        const savePromises = entries.map(async([key, data]) => {
             try {
                 await saveWithRetry(key, data.value);
                 updateLastSave(key);
                 notifyQueueUpdate(key, 'saved');
             } catch (error) {
                 handleSaveError(key, error);
+
+                if (state.retryCount.get(key) < AUTO_SAVE_CONFIG.MAX_RETRIES) {
+                    state.queue.set(key, data);
+                }
             }
+        });
+
+        await Promise.all(savePromises);
+    }
+            
+     /**
+     * Définit la valeur d'un élément
+     * @param {HTMLElement} element - Élément HTML
+     * @param {any} value - Valeur à définir
+     */
+    function setElementValue(element, value) {
+        if (element.type === 'checkbox') {
+            element.checked = value;
+        } else if (element.type === 'radio') {
+            element.checked = element.value === value;
+        } else if (element.tagName === 'SELECT' && element.multiple) {
+            Array.from(element.options).forEach(option => {
+                option.selected = value.includes(option.value);
+            });
+        } else {
+            element.value = value;
         }
+
+        // Déclencher l'événement de changement
+        element.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    /**
+     * Trouve un élément par sa clé de stockage
+     * @param {string} key - Clé de stockage
+     * @returns {HTMLElement} Élément trouvé
+     */
+    function findElementByKey(key) {
+        return document.querySelector(`[data-auto-save="${key}"]`) ||
+               document.getElementById(key);
+    }
+    
+    /**
+     * Sauvegarde avec le service de sauvegarde importé
+     * @param {string} key - Clé de stockage
+     * @param {any} value - Valeur à sauvegarder
+     */
+    async function saveData(key, value) {
+        return saveData.save(key, value, {
+            createBackup: false, // Géré séparément par l'auto-save
+            compress: value.length > AUTO_SAVE_CONFIG.COMPRESSION_THRESHOLD,
+            validate: true
+        });
     }
 
     /**
@@ -148,7 +199,7 @@ const autoSaveService = (() => {
         const retries = state.retryCount.get(key) || 0;
 
         try {
-            await storageSaveService.saveItem(key, value);
+            await saveData(key, value);
             state.retryCount.delete(key);
         } catch (error) {
             if (retries < AUTO_SAVE_CONFIG.MAX_RETRIES) {
@@ -188,13 +239,14 @@ const autoSaveService = (() => {
         });
 
         try {
-            await storageSaveService.saveItem(
+            await saveData(
                 `backup_${timestamp}`,
                 backup
             );
             cleanupOldBackups();
         } catch (error) {
             console.error('Backup creation failed:', error);
+            logAutoSaveError('backup', error);
         }
     }
 
@@ -299,6 +351,38 @@ const autoSaveService = (() => {
         } else {
             return element.value;
         }
+
+        element.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    /**
+     * Restauration de sauvegarde
+     * @param {string} backupKey - Clé de la sauvegarde
+     */
+    async function restoreFromBackup(backupKey) {
+        try {
+            // Charger la sauvegarde avec le service de sauvegarde
+            const backup = await saveData.load(backupKey);
+            if (!backup || !backup.data) {
+                throw new Error('Invalid backup data');
+            }
+
+            // Restaurer les données
+            for (const [key, value] of Object.entries(backup.data)) {
+                await saveData(key, value);
+                const element = findElementByKey(key);
+                if (element) {
+                    setElementValue(element, value);
+                }
+            }
+
+            notifyQueueUpdate('restore', 'completed');
+            return true;
+        } catch (error) {
+            console.error('Backup restoration failed:', error);
+            notifyQueueUpdate('restore', 'error', error.message);
+            return false;
+        }
     }
 
     /**
@@ -379,6 +463,7 @@ const autoSaveService = (() => {
     return {
         initialize,
         processQueueImmediately: processQueue,
+        restoreFromBackup,
         getState: () => ({
             isEnabled: state.isEnabled,
             queueSize: state.queue.size,

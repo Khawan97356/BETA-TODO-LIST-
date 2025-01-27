@@ -136,6 +136,127 @@ const eventHandlerService = (() => {
         }
     }
 
+    async function handleSaveEvent(event) {
+        try {
+            // Utilisation du service de chargement de données
+            await dataLoaderService.saveData(event.key, event.newValue);
+            
+            // Notification du service d'auto-save
+            autoSaveService.notifyDataSaved(event.key);
+            
+        } catch (error) {
+            handleError('save_event', error);
+        }
+    }
+
+    async function handleDeleteEvent(event) {
+        try {
+            // Utilisation du service de chargement de données
+            await dataLoaderService.deleteData(event.key);
+            
+            // Notification du service d'auto-save
+            autoSaveService.removeFromQueue(event.key);
+            
+        } catch (error) {
+            handleError('delete_event', error);
+        }
+    }
+
+    async function handleUpdateEvent(event) {
+        try {
+            // Vérification de la synchronisation avec dataLoader
+            const needsSync = await dataLoaderService.checkSync(event.key);
+            
+            if (needsSync) {
+                await dataLoaderService.syncData(event.key);
+            }
+            
+            // Mise à jour de l'auto-save si nécessaire
+            if (autoSaveService.hasQueuedChanges(event.key)) {
+                autoSaveService.updateQueuedValue(event.key, event.newValue);
+            }
+            
+        } catch (error) {
+            handleError('update_event', error);
+        }
+    }
+
+    async function syncPendingChanges() {
+        try {
+            // Synchronisation avec dataLoader
+            await dataLoaderService.syncAll();
+            
+            // Traitement des changements en attente dans auto-save
+            await autoSaveService.processQueueImmediately();
+            
+        } catch (error) {
+            handleError('sync_changes', error);
+        }
+    }
+
+    function enableOfflineMode() {
+        // Configuration du mode hors ligne pour dataLoader
+        dataLoaderService.enableOfflineMode();
+        
+        // Configuration du mode hors ligne pour auto-save
+        autoSaveService.setOfflineMode(true);
+    }
+
+    async function handleConnectivityChange(isOnline) {
+        try {
+            if (isOnline) {
+                // Synchronisation des données
+                await syncPendingChanges();
+                
+                // Restauration du mode normal
+                dataLoaderService.disableOfflineMode();
+                autoSaveService.setOfflineMode(false);
+            } else {
+                // Activation du mode hors ligne
+                enableOfflineMode();
+            }
+
+            notifyConnectivityChange(isOnline);
+
+        } catch (error) {
+            handleError('connectivity_event', error);
+        }
+    }
+
+    function handleQuotaExceeded(event) {
+        try {
+            // Notification des services
+            dataLoaderService.handleQuotaExceeded();
+            autoSaveService.handleQuotaExceeded();
+
+            notifyQuotaExceeded({
+                timestamp: Date.now(),
+                availableSpace: calculateAvailableSpace()
+            });
+
+            cleanupStorage();
+
+        } catch (error) {
+            handleError('quota_event', error);
+        }
+    }
+
+    function handleDataLoaderError(error) {
+        // Gestion spécifique des erreurs de dataLoader
+        handleError('data_loader', error);
+        
+        // Notification du service d'auto-save
+        autoSaveService.handleDataError(error);
+    }
+
+    function handleAutoSaveEvent(event) {
+        // Synchronisation avec dataLoader si nécessaire
+        if (event.status === 'saved') {
+            dataLoaderService.notifyDataSaved(event.key, event.value);
+        }
+    }
+
+
     /**
      * Gestion des événements de formulaire
      * @param {Event} event - Événement de formulaire
@@ -149,8 +270,15 @@ const eventHandlerService = (() => {
             };
 
             autoSaveService.queueChange(event.target);
-            notifyFormChange(formData);
+            
 
+            if (shouldSyncfromData(event.target)) {
+                dataLoaderService.queueSync(getStorageKey(event.target), formData.value);
+
+        } 
+
+        notifyFormChange(formData);
+        
         } catch (error) {
             handleError('form_event', error);
         }
@@ -380,10 +508,14 @@ const eventHandlerService = (() => {
     // Interface publique
     return {
         initialize,
-        getStats: () => ({ ...state.stats }),
+        getStats: () => ({ ...state.stats, dataLoader : dataLoaderService.getStats(),
+         autoSave : autoSaveService.getStats()
+         }),
         clearQueue: () => {
             state.eventQueue = [];
             state.processingQueue = false;
+            autoSaveService.clearQueue();
+            dataLoaderService.clearQueue();
         },
         HANDLER_CONFIG
     };

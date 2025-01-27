@@ -3,23 +3,19 @@
 // dom-events.js dépend de
 import { ModernBrowserChecker, BrowserCompatUtils } from '../compatibility/modern-browsers.js';
 
-
-
-
-
-
-
-
-
-
-
 // Utilitaire de logging des événements
 const EventLogger = {
     // Stockage des listeners pour le débug
     eventRegistry: new Map(),
+    BrowserChecker : new ModernBrowserChecker(),
     
     // Activation du mode debug
     startDebugging(element = document) {
+        const report = this.BrowserChecker.checkCompatibility();
+        if (!report.warnings.length > 0) {
+            console.warn('Browser compatibility warnings:', report.warnings);
+        }
+
         const events = [
             'click', 'dblclick', 'mouseenter', 'mouseleave', 
             'mouseover', 'mouseout', 'mousemove',
@@ -30,9 +26,13 @@ const EventLogger = {
             'touchstart', 'touchend', 'touchmove'
         ];
 
+        if (BrowserCompatUtils.detectFeature('touch')) {
+            events.push('touchstart', 'touchend', 'touchmove', 'touchcancel');
+        }
+
         events.forEach(eventType => {
             const handler = (e) => {
-                console.log(%c${eventType} Event Detected, 'color: #2196F3; font-weight: bold;', {
+                console.log('%c${eventType} Event Detected', 'color: #2196F3; font-weight: bold;', {
                     eventType: e.type,
                     target: e.target,
                     currentTarget: e.currentTarget,
@@ -68,9 +68,16 @@ class EventDelegationTester {
     constructor(rootElement) {
         this.root = rootElement || document;
         this.delegatedHandlers = new Map();
+        this.BrowserChecker = new ModernBrowserChecker();
     }
 
     addDelegatedListener(selector, eventType, handler) {
+        if (BrowserCompatUtils.detectFeature('querySelector')) {
+            console.warn('querySelector not supported in this browser');
+            return;
+        }
+
+
         const wrappedHandler = (e) => {
             const target = e.target.closest(selector);
             if (target) {
@@ -94,8 +101,14 @@ class EventDelegationTester {
 // Gestionnaire de performance des événements
 const EventPerformanceMonitor = {
     measurements: new Map(),
+    BrowserChecker : new ModernBrowserChecker(),
     
     startMeasuring(eventType) {
+        if (BrowserCompatUtils.detectFeature('performance')) {
+            console.warn('Performance API not supported in this browser');
+            return;
+        }
+  
         this.measurements.set(eventType, {
             count: 0,
             totalTime: 0,
@@ -141,9 +154,15 @@ const EventPerformanceMonitor = {
 class CustomEventTester {
     constructor() {
         this.events = new Set();
+        this.BrowserChecker = new ModernBrowserChecker();
     }
 
     createEvent(eventName, detail = {}) {
+
+        if (BrowserCompatUtils.detectFeature('CustomEvent')) {
+            console.warn('CustomEvent not supported in this browser');
+            return null;
+        }
         const event = new CustomEvent(eventName, { 
             detail,
             bubbles: true,
@@ -166,8 +185,16 @@ class CustomEventTester {
 // Détecteur de fuites de mémoire liées aux événements
 const EventLeakDetector = {
     listeners: new WeakMap(),
+    BrowserChecker : new ModernBrowserChecker(),
     
+
     trackElement(element) {
+        if (!BrowserCompatUtils.detectFeature('weakmap')) {
+            console.warn('WeakMap not supported in this browser');
+            return;        
+        }
+
+
         this.listeners.set(element, new Set());
         
         const originalAddEventListener = element.addEventListener;
@@ -199,6 +226,13 @@ const EventLeakDetector = {
 
 // Exemple d'utilisation et tests
 function runEventTests() {
+    const browserChecker = new ModernBrowserChecker();
+    const report = browserChecker.checkCompatibility();
+
+    console.log('Browser Compatibility Report:', report);
+
+    if (!report.warnings.length > 0) {
+
     // Test basique des événements
     const testButton = document.createElement('button');
     testButton.textContent = 'Test Button';
@@ -218,6 +252,10 @@ function runEventTests() {
     
     // Détection des fuites
     EventLeakDetector.trackElement(testButton);
+
+} else {
+    console.warn('Some feature might not work in this browser', report.warnings);
+}
 }
 
 // Export des utilitaires

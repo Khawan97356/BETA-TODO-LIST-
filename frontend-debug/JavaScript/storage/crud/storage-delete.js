@@ -21,6 +21,27 @@ const storageDeleteService = (() => {
     };
 
     /**
+     * Vérifie l'intégrité des données avant suppression
+     * @param {string} key - Clé de l'élément
+     * @param {string} value - Valeur de l'élément
+     * @returns {Promise<boolean>} Résultat de la vérification
+     */
+    async function verifyDataIntegrity(key, value) {
+        try {
+            // Utilisation de checkDataIntegrity importé
+            const integrityResult = await checkDataIntegrity(value);
+            if (!integrityResult.isValid) {
+                console.warn('Data integrity check failed:', integrityResult.errors);
+                return false;
+            }
+            return true;
+        } catch (error) {
+            console.error('Integrity check error:', error);
+            return false;
+        }
+    }
+
+    /**
      * Supprime un élément du localStorage avec validation et sauvegarde
      * @param {string} key - Clé de l'élément à supprimer
      * @param {Object} options - Options de suppression
@@ -30,7 +51,8 @@ const storageDeleteService = (() => {
         const {
             createBackup = true,
             verifyIntegrity = true,
-            notifyChange = true
+            notifyChange = true,
+            syncDelete = false
         } = options;
 
         try {
@@ -58,9 +80,13 @@ const storageDeleteService = (() => {
                 await createItemBackup(key, item);
             }
 
-            // Suppression de l'élément
-            localStorage.removeItem(key);
-
+            // suppression syncronisation si demandée
+            if (syncDelete) {
+                await dataLoader.deleteItem(key);
+            } else {
+                localStorage.removeItem(key);
+            }
+            
             // Logging de l'opération
             logDeleteOperation(key, true);
 
@@ -93,6 +119,13 @@ const storageDeleteService = (() => {
             failed: []
         };
 
+        // Vérification initiale des données
+        const dataVerification = await Promise.all(
+            keys.map(key => dataLoader.verifyData(key)) // Utilisation de dataLoader
+        );
+
+        const validKeys = keys.filter((key, index) => dataVerification[index]);
+
         // Traitement par lots
         for (let i = 0; i < keys.length; i += DELETE_CONFIG.BATCH_SIZE) {
             const batch = keys.slice(i, i + DELETE_CONFIG.BATCH_SIZE);
@@ -105,6 +138,9 @@ const storageDeleteService = (() => {
                     results.failed.push({ key, error: error.message });
                 }
             }));
+
+            // syncronisation apres chaque lot
+            await dataLoader.syncChanges();
         }
 
         // Log du résultat global
@@ -127,9 +163,19 @@ const storageDeleteService = (() => {
                 timestamp: new Date().toISOString(),
                 metadata: {
                     backupType: 'pre_delete',
-                    originalSize: value.length
+                    originalSize: value.length,
+                    integrityCheck : await checkDataIntegrity(value)
                 }
             };
+
+            await dataLoader.setItem(backupKey, JSON.stringify(backupData));
+
+            return backupKey;
+
+        } catch (error) {
+            throw new Error(DELETE_ERRORS.BACKUP_FAILED);
+        }
+    }
 
             localStorage.setItem(backupKey, JSON.stringify(backupData));
             return backupKey;
@@ -243,6 +289,7 @@ const storageDeleteService = (() => {
         batchDelete,
         secureDelete,
         getDeleteLogs: () => JSON.parse(localStorage.getItem(DELETE_CONFIG.DELETE_LOG_KEY) || '[]'),
+        verifyDataIntegrity,
         DELETE_ERRORS,
         DELETE_CONFIG
     };
