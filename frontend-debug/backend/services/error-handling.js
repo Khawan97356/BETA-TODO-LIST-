@@ -1,137 +1,112 @@
 // error-handling.js
 import { logError } from './logging.js';
 
+// Types d'erreurs standardisés
+const ERROR_TYPES = {
+    VALIDATION: 'VALIDATION_ERROR',
+    STORAGE: 'STORAGE_ERROR',
+    INTEGRITY: 'INTEGRITY_ERROR',
+    SYNC: 'SYNC_ERROR',
+    SYSTEM: 'SYSTEM_ERROR',
+    NETWORK: 'NETWORK_ERROR',
+    TIMEOUT: 'TIMEOUT_ERROR',
+    AUTH: 'AUTHENTICATION_ERROR',
+    NOT_FOUND: 'NOT_FOUND_ERROR',
+    SERVER: 'SERVER_ERROR'
+};
 
-// Au début du fichier, juste après l'import
+// Niveaux de sévérité
+const ERROR_SEVERITY = {
+    LOW: 'low',
+    MEDIUM: 'medium',
+    HIGH: 'high',
+    CRITICAL: 'critical'
+};
+
+// Fonction principale d'export pour la gestion des erreurs
 export const handleError = (error, context = {}) => {
     const errorService = errorHandlingService();
     return errorService.handleError(error, context);
 };
+
 function errorHandlingService() {
-    // Configuration des constantes
-    const ERROR_TYPES = {
-        VALIDATION: 'VALIDATION_ERROR',
-        STORAGE: 'STORAGE_ERROR',
-        INTEGRITY: 'INTEGRITY_ERROR',
-        SYNC: 'SYNC_ERROR',
-        SYSTEM: 'SYSTEM_ERROR',
-        NETWORK: 'NETWORK_ERROR',
-        TIMEOUT: 'TIMEOUT_ERROR'
-    };
-
-    const ERROR_SEVERITY = {
-        LOW: 'low',
-        MEDIUM: 'medium',
-        HIGH: 'high',
-        CRITICAL: 'critical'
-    };
-
-    // frontend-debug/backend/services/error-handling.js
-
-export const errorHandling = {
-    // Types d'erreurs
-    errorTypes: {
-        VALIDATION: 'VALIDATION_ERROR',
-        AUTH: 'AUTHENTICATION_ERROR',
-        NOT_FOUND: 'NOT_FOUND_ERROR',
-        SERVER: 'SERVER_ERROR'
-    },
-
-    // Gestionnaire d'erreurs
-    handleError: (error) => {
-        const timestamp = new Date().toISOString();
-        
-        // Format standard des erreurs
-        return {
-            success: false,
-            error: {
-                type: error.type || 'UNKNOWN_ERROR',
-                message: error.message,
-                timestamp
-            }
-        };
-    },
-
-    // Logger d'erreurs
-    logError: (error) => {
-        console.error([${new Date().toISOString()}] Error:, {
-            type: error.type,
-            message: error.message,
-            stack: error.stack
-        });
-    },
-
-    // Création d'erreur formatée
-    createError: (type, message) => {
-        return {
-            type,
-            message,
-            timestamp: new Date().toISOString()
-        };
-    }
-};
-
     // Gestionnaire principal des erreurs
     function handleError(error, context = {}) {
-        const errorDetails = analyzeError(error);
-        const enrichedError = enrichErrorData(errorDetails, context);
-        
-        // Log de l'erreur
-        logError(enrichedError);
+        try {
+            const errorDetails = analyzeError(error);
+            const enrichedError = enrichErrorData(errorDetails, context);
+            
+            // Utilisation du nouveau système de logging
+            logError(enrichedError, context);
 
-        // Notification du système de monitoring
-        notifyMonitor(enrichedError);
+            // Notification du système de monitoring
+            notifyMonitor(enrichedError);
 
-        // Actions de récupération si nécessaire
-        const recovery = attemptRecovery(enrichedError);
+            // Tentative de récupération
+            const recovery = attemptRecovery(enrichedError);
 
-        return {
-            error: enrichedError,
-            handled: true,
-            recovery,
-            timestamp: new Date().toISOString()
-        };
+            return formatErrorResponse(enrichedError, recovery);
+        } catch (handlingError) {
+            // En cas d'échec du traitement de l'erreur
+            console.error('Error handling failed:', handlingError);
+            return createFallbackError(error);
+        }
     }
-    
 
-    // Analyse de l'erreur
+    // Analyse détaillée de l'erreur
     function analyzeError(error) {
-        const errorInfo = {
+        return {
             type: determineErrorType(error),
-            message: error.message || 'Unknown error',
+            message: error.message || 'Unknown error occurred',
             stack: error.stack,
             severity: calculateSeverity(error),
-            timestamp: new Date().toISOString()
-        };
-
-        return {
-            ...errorInfo,
-            fingerprint: generateErrorFingerprint(errorInfo)
+            timestamp: new Date().toISOString(),
+            fingerprint: generateErrorFingerprint(error)
         };
     }
 
     // Détermination du type d'erreur
     function determineErrorType(error) {
-        if (error.name === 'QuotaExceededError') return ERROR_TYPES.STORAGE;
-        if (error.name === 'SecurityError') return ERROR_TYPES.SYSTEM;
-        if (error.name === 'SyntaxError') return ERROR_TYPES.VALIDATION;
-        if (error.name === 'NetworkError') return ERROR_TYPES.NETWORK;
-        if (error.name === 'TimeoutError') return ERROR_TYPES.TIMEOUT;
-        
-        // Analyse du message d'erreur pour une classification plus précise
-        const message = error.message.toLowerCase();
-        if (message.includes('storage')) return ERROR_TYPES.STORAGE;
-        if (message.includes('validation')) return ERROR_TYPES.VALIDATION;
-        if (message.includes('integrity')) return ERROR_TYPES.INTEGRITY;
-        if (message.includes('sync')) return ERROR_TYPES.SYNC;
+        if (!error) return ERROR_TYPES.SYSTEM;
+
+        // Vérification du type d'erreur par nom
+        const errorTypeMap = {
+            QuotaExceededError: ERROR_TYPES.STORAGE,
+            SecurityError: ERROR_TYPES.SYSTEM,
+            SyntaxError: ERROR_TYPES.VALIDATION,
+            NetworkError: ERROR_TYPES.NETWORK,
+            TimeoutError: ERROR_TYPES.TIMEOUT,
+            AuthenticationError: ERROR_TYPES.AUTH,
+            NotFoundError: ERROR_TYPES.NOT_FOUND
+        };
+
+        if (error.name && errorTypeMap[error.name]) {
+            return errorTypeMap[error.name];
+        }
+
+        // Analyse du message d'erreur
+        const message = (error.message || '').toLowerCase();
+        const messagePatterns = {
+            'storage': ERROR_TYPES.STORAGE,
+            'validation': ERROR_TYPES.VALIDATION,
+            'integrity': ERROR_TYPES.INTEGRITY,
+            'sync': ERROR_TYPES.SYNC,
+            'network': ERROR_TYPES.NETWORK,
+            'timeout': ERROR_TYPES.TIMEOUT,
+            'auth': ERROR_TYPES.AUTH,
+            'not found': ERROR_TYPES.NOT_FOUND,
+            'server': ERROR_TYPES.SERVER
+        };
+
+        for (const [pattern, type] of Object.entries(messagePatterns)) {
+            if (message.includes(pattern)) return type;
+        }
 
         return ERROR_TYPES.SYSTEM;
     }
 
-    // Calcul de la sévérité
+    // Calcul de la sévérité de l'erreur
     function calculateSeverity(error) {
-        const type = determineErrorType(error);
-        
         const severityMap = {
             [ERROR_TYPES.VALIDATION]: ERROR_SEVERITY.LOW,
             [ERROR_TYPES.STORAGE]: ERROR_SEVERITY.MEDIUM,
@@ -139,9 +114,13 @@ export const errorHandling = {
             [ERROR_TYPES.SYNC]: ERROR_SEVERITY.MEDIUM,
             [ERROR_TYPES.SYSTEM]: ERROR_SEVERITY.HIGH,
             [ERROR_TYPES.NETWORK]: ERROR_SEVERITY.MEDIUM,
-            [ERROR_TYPES.TIMEOUT]: ERROR_SEVERITY.LOW
+            [ERROR_TYPES.TIMEOUT]: ERROR_SEVERITY.LOW,
+            [ERROR_TYPES.AUTH]: ERROR_SEVERITY.HIGH,
+            [ERROR_TYPES.NOT_FOUND]: ERROR_SEVERITY.LOW,
+            [ERROR_TYPES.SERVER]: ERROR_SEVERITY.HIGH
         };
 
+        const type = determineErrorType(error);
         return severityMap[type] || ERROR_SEVERITY.MEDIUM;
     }
 
@@ -155,7 +134,10 @@ export const errorHandling = {
                 userAgent: navigator.userAgent,
                 timestamp: new Date().toISOString()
             },
-            storage: getStorageState()
+            system: {
+                storage: getStorageState(),
+                performance: getPerformanceMetrics()
+            }
         };
     }
 
@@ -164,70 +146,35 @@ export const errorHandling = {
         try {
             return {
                 quotaUsed: calculateStorageUsage(),
-                keys: Object.keys(localStorage).length,
-                availableSpace: estimateAvailableSpace()
+                availableSpace: estimateAvailableSpace(),
+                keys: Object.keys(localStorage).length
             };
         } catch (error) {
             return { error: 'Unable to get storage state' };
         }
     }
 
-    // Calcul de l'utilisation du stockage
-    function calculateStorageUsage() {
-        let total = 0;
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            total += localStorage.getItem(key).length;
-        }
-        return total;
-    }
-
-    // Estimation de l'espace disponible
-    function estimateAvailableSpace() {
-        try {
-            let testKey = 'storage-test';
-            let testString = 'a';
-            let size = 0;
-
-            while (true) {
-                localStorage.setItem(testKey, testString);
-                size = testString.length;
-                testString += testString;
+    // Métriques de performance
+    function getPerformanceMetrics() {
+        if (!window.performance) return null;
+        
+        return {
+            memory: performance.memory ? {
+                usedJSHeapSize: performance.memory.usedJSHeapSize,
+                totalJSHeapSize: performance.memory.totalJSHeapSize
+            } : null,
+            timing: {
+                loadTime: performance.timing.loadEventEnd - performance.timing.navigationStart,
+                domReady: performance.timing.domComplete - performance.timing.domLoading
             }
-        } catch (e) {
-            localStorage.removeItem('storage-test');
-            return size;
-        }
-    }
-
-    // Logging des erreurs
-    function logError(error) {
-        try {
-            const errorLogKey = 'error_log';
-            const currentLog = JSON.parse(localStorage.getItem(errorLogKey) || '[]');
-            
-            currentLog.push(error);
-            
-            // Limite de la taille du log
-            if (currentLog.length > 100) {
-                currentLog.shift();
-            }
-
-            localStorage.setItem(errorLogKey, JSON.stringify(currentLog));
-            
-            // Émission d'événement pour le moniteur
-            dispatchErrorEvent('error_logged', error);
-
-        } catch (logError) {
-            console.error('Failed to log error:', logError);
-        }
+        };
     }
 
     // Notification du moniteur
     function notifyMonitor(error) {
-        const event = new CustomEvent('storage_monitor', {
+        const event = new CustomEvent('error_monitor', {
             detail: {
-                type: 'error',
+                type: 'error_occurred',
                 error,
                 timestamp: new Date().toISOString()
             }
@@ -237,25 +184,31 @@ export const errorHandling = {
 
     // Tentative de récupération
     function attemptRecovery(error) {
-        const recoveryActions = {
+        const recoveryStrategies = {
             [ERROR_TYPES.STORAGE]: cleanupStorage,
             [ERROR_TYPES.INTEGRITY]: repairDataIntegrity,
             [ERROR_TYPES.SYNC]: resyncData
         };
 
-        const recoveryAction = recoveryActions[error.type];
-        if (recoveryAction) {
+        const strategy = recoveryStrategies[error.type];
+        if (strategy) {
             try {
-                return recoveryAction();
+                return strategy();
             } catch (recoveryError) {
-                return { success: false, error: recoveryError.message };
+                return {
+                    success: false,
+                    error: recoveryError.message
+                };
             }
         }
 
-        return { success: false, reason: 'No recovery action available' };
+        return {
+            success: false,
+            reason: 'No recovery strategy available'
+        };
     }
 
-    // Actions de récupération spécifiques
+    // Stratégies de récupération
     function cleanupStorage() {
         const nonEssentialKeys = Object.keys(localStorage)
             .filter(key => !key.startsWith('essential_'));
@@ -276,28 +229,65 @@ export const errorHandling = {
         }
 
         corruptedData.forEach(key => localStorage.removeItem(key));
-        return { success: true, repairedItems: corruptedData.length };
+        return {
+            success: true,
+            repairedItems: corruptedData.length
+        };
     }
 
     function resyncData() {
-        const syncEvent = new CustomEvent('storage_sync_required');
-        window.dispatchEvent(syncEvent);
+        window.dispatchEvent(new CustomEvent('storage_sync_required'));
         return { success: true, action: 'sync_triggered' };
     }
 
-    // Génération d'une empreinte unique pour l'erreur
-    function generateErrorFingerprint(error) {
-        const fingerprintData = `${error.type}:${error.message}:${error.severity}`;
-        return btoa(fingerprintData).slice(0, 8);
+    // Formatage de la réponse d'erreur
+    function formatErrorResponse(error, recovery) {
+        return {
+            success: false,
+            error: {
+                type: error.type,
+                message: error.message,
+                severity: error.severity,
+                fingerprint: error.fingerprint,
+                timestamp: error.timestamp
+            },
+            recovery,
+            handled: true
+        };
+    }
+
+    // Erreur de repli
+    function createFallbackError(originalError) {
+        return {
+            success: false,
+            error: {
+                type: ERROR_TYPES.SYSTEM,
+                message: 'Error handling failed',
+                originalError: originalError.message,
+                timestamp: new Date().toISOString()
+            },
+            handled: false
+        };
     }
 
     // Interface publique
     return {
         handleError,
-        getErrorLog: () => JSON.parse(localStorage.getItem('error_log') || '[]'),
         ERROR_TYPES,
         ERROR_SEVERITY
     };
 }
 
 export default errorHandlingService;
+
+
+// Exemple d'utilisation
+try {
+    // Code qui peut générer une erreur
+} catch (error) {
+    const result = handleError(error, {
+        component: 'UserProfile',
+        action: 'updateData'
+    });
+    // Gérer le résultat
+}

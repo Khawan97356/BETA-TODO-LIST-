@@ -2,13 +2,13 @@
 // modern-browsers.js dépend de
 import { PolyfillsManager, PolyfillUtils } from './polyfills.js';
 
-
 // === MODERN BROWSER COMPATIBILITY CHECKER === //
 
 class ModernBrowserChecker {
     constructor() {
         this.browserFeatures = new Map();
         this.warnings = [];
+        this.polyfillsManager = new PolyfillsManager(); // Ajout du gestionnaire de polyfills
         this.initializeFeatureTests();
     }
 
@@ -22,16 +22,28 @@ class ModernBrowserChecker {
                         eval('() => {}');
                         return true;
                     } catch (e) {
-                        return false;
+                        if (!this.polyfillsManager.loadPolyfill('arrowFunctions')) {
+                            return false;
+                        }
+                        return true;
                     }
                 },
-                'Promises': () => typeof Promise !== 'undefined',
+                'Promises': () => {
+                    const hasPromise = typeof Promise !== 'undefined';
+                    if (!hasPromise) {
+                        return this.polyfillsManager.loadPolyfill('Promise');
+                    }
+                    return true;
+                },
                 'Async/Await': () => {
                     try {
                         eval('async () => {}');
                         return true;
                     } catch (e) {
-                        return false;
+                        if (!this.polyfillsManager.loadPolyfill('asyncAwait')) {
+                            return false;
+                        }
+                        return true;
                     }
                 },
                 'Classes': () => {
@@ -39,7 +51,10 @@ class ModernBrowserChecker {
                         eval('class Test {}');
                         return true;
                     } catch (e) {
-                        return false;
+                        if (!this.polyfillsManager.loadPolyfill('classes')) {
+                            return false;
+                        }
+                        return true;
                     }
                 }
             }
@@ -48,7 +63,13 @@ class ModernBrowserChecker {
         this.browserFeatures.set('WebAPIs', {
             name: 'Modern Web APIs',
             tests: {
-                'Fetch': () => typeof fetch !== 'undefined',
+                'Fetch': () => {
+                    const hasFetch = typeof fetch !== 'undefined';
+                    if (!hasFetch) {
+                        return this.polyfillsManager.loadPolyfill('fetch');
+                    }
+                    return true;
+                },
                 'WebSocket': () => typeof WebSocket !== 'undefined',
                 'WebWorkers': () => typeof Worker !== 'undefined',
                 'ServiceWorker': () => 'serviceWorker' in navigator,
@@ -90,9 +111,20 @@ class ModernBrowserChecker {
                     }
                 },
                 'WebComponents': () => {
-                    return 'customElements' in window && 
-                           'attachShadow' in Element.prototype && 
-                           'getRootNode' in Element.prototype;
+                    const hasWebComponents = 'customElements' in window && 
+                        'attachShadow' in Element.prototype && 
+                        'getRootNode' in Element.prototype;
+                    if (!hasWebComponents) {
+                        return this.polyfillsManager.loadPolyfill('webComponents');
+                    }
+                    return true;
+                },
+                'Array.from': () => {
+                    const hasArrayFrom = typeof Array.from === 'function';
+                    if (!hasArrayFrom) {
+                        return this.polyfillsManager.loadPolyfill('Array.from');
+                    }
+                    return true;
                 }
             }
         });
@@ -141,7 +173,7 @@ class ModernBrowserChecker {
         return browser;
     }
 
-    // Vérification des fonctionnalités
+    // Vérification des fonctionnalités avec gestion des polyfills
     checkFeatures() {
         const results = new Map();
         
@@ -149,15 +181,20 @@ class ModernBrowserChecker {
             const categoryResults = {
                 name: category.name,
                 supported: [],
-                unsupported: []
+                unsupported: [],
+                polyfilled: []
             };
 
             Object.entries(category.tests).forEach(([feature, test]) => {
                 if (test()) {
-                    categoryResults.supported.push(feature);
+                    if (this.polyfillsManager.loadedPolyfills.has(feature)) {
+                        categoryResults.polyfilled.push(feature);
+                    } else {
+                        categoryResults.supported.push(feature);
+                    }
                 } else {
                     categoryResults.unsupported.push(feature);
-                    this.warnings.push(${feature} n'est pas supporté dans ce navigateur);
+                    this.warnings.push(`${feature} n'est pas supporté dans ce navigateur`);
                 }
             });
 
@@ -176,7 +213,8 @@ class ModernBrowserChecker {
             browser,
             features,
             warnings: this.warnings,
-            recommendations: this.generateRecommendations(browser, features)
+            recommendations: this.generateRecommendations(browser, features),
+            polyfills: Array.from(this.polyfillsManager.loadedPolyfills)
         };
     }
 
@@ -198,7 +236,10 @@ class ModernBrowserChecker {
         // Recommandations basées sur les fonctionnalités manquantes
         features.forEach((category) => {
             if (category.unsupported.length > 0) {
-                recommendations.push(Fonctionnalités ${category.name} non supportées : ${category.unsupported.join(', ')});
+                recommendations.push(`Fonctionnalités ${category.name} non supportées : ${category.unsupported.join(', ')}`);
+            }
+            if (category.polyfilled.length > 0) {
+                recommendations.push(`Fonctionnalités ${category.name} supportées via polyfill : ${category.polyfilled.join(', ')}`);
             }
         });
 
@@ -225,7 +266,8 @@ class ModernBrowserChecker {
             featureSupport: compatibility.features,
             security,
             warnings: compatibility.warnings,
-            recommendations: compatibility.recommendations
+            recommendations: compatibility.recommendations,
+            polyfillsLoaded: Array.from(this.polyfillsManager.loadedPolyfills)
         };
     }
 }
@@ -258,12 +300,9 @@ const BrowserCompatUtils = {
         return features[feature] ? features[feature]() : false;
     },
 
-    // Polyfill conditionnel
+    // Polyfill conditionnel utilisant PolyfillUtils
     conditionalPolyfill(feature, polyfill) {
-        if (!this.detectFeature(feature)) {
-            return polyfill();
-        }
-        return true;
+        return PolyfillUtils.checkSupport(feature) || polyfill();
     }
 };
 
@@ -273,20 +312,13 @@ export {
     BrowserCompatUtils
 };
 
-// Exemple d'utilisation
+// Exemple d'utilisation avec gestion des polyfills
 function checkBrowserCompatibility() {
     const checker = new ModernBrowserChecker();
+    // Charger d'abord les polyfills nécessaires
+    checker.polyfillsManager.loadAllPolyfills();
+    // Générer ensuite le rapport
     const report = checker.generateReport();
     console.log('Browser Compatibility Report:', report);
     return report;
 }
-
-// Vérifier la compatibilité du navigateur
-//const checker = new ModernBrowserChecker();
-//const report = checker.generateReport();
-
-// Utiliser les utilitaires
-//const hasWebP = BrowserCompatUtils.detectFeature('webp');
-//if (!hasWebP) {
-    // Fallback pour les navigateurs sans support WebP
-//}

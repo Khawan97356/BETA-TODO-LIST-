@@ -1,6 +1,58 @@
 // storage-delete.js
-import { dataLoader } from '../../sync/data-loader.js';
-import { checkDataIntegrity } from '../../structure/data-integrity.js';
+
+// Intégration de dataLoader
+const dataLoader = (() => {
+    return {
+        load: async (key) => {
+            try {
+                const data = localStorage.getItem(key);
+                return data ? JSON.parse(data) : null;
+            } catch (error) {
+                console.error('Error loading data:', error);
+                return null;
+            }
+        },
+        verify: async (key) => {
+            try {
+                const data = localStorage.getItem(key);
+                return data !== null;
+            } catch (error) {
+                console.error('Error verifying data:', error);
+                return false;
+            }
+        }
+    };
+})();
+
+// Intégration de checkDataIntegrity
+const checkDataIntegrity = (() => {
+    const validateStructure = (data) => {
+        if (!data) return false;
+        if (typeof data === 'string') {
+            try {
+                JSON.parse(data);
+                return true;
+            } catch {
+                return false;
+            }
+        }
+        return typeof data === 'object' && data !== null;
+    };
+
+    const checkSize = (data) => {
+        const size = new Blob([JSON.stringify(data)]).size;
+        return size <= 5242880; // 5MB limite de localStorage
+    };
+
+    return async (data) => {
+        try {
+            return validateStructure(data) && checkSize(data);
+        } catch (error) {
+            console.error('Data integrity check failed:', error);
+            return false;
+        }
+    };
+})();
 
 const storageDeleteService = (() => {
     // Constants pour la configuration
@@ -17,8 +69,21 @@ const storageDeleteService = (() => {
         KEY_NOT_FOUND: 'KEY_NOT_FOUND',
         INTEGRITY_CHECK_FAILED: 'INTEGRITY_CHECK_FAILED',
         BACKUP_FAILED: 'BACKUP_CREATION_FAILED',
-        BATCH_DELETE_FAILED: 'BATCH_DELETE_FAILED'
+        BATCH_DELETE_FAILED: 'BATCH_DELETE_FAILED',
+        VALIDATION_FAILED: 'VALIDATION_FAILED'
     };
+
+    /**
+     * Valide une clé de stockage
+     * @param {string} key - Clé à valider
+     * @returns {boolean} Résultat de la validation
+     */
+    function validateKey(key) {
+        return typeof key === 'string' && 
+               key.length > 0 && 
+               key.length <= 100 &&
+               /^[a-zA-Z0-9_-]+$/.test(key);
+    }
 
     /**
      * Supprime un élément du localStorage avec validation et sauvegarde
@@ -39,15 +104,15 @@ const storageDeleteService = (() => {
                 throw new Error(DELETE_ERRORS.INVALID_KEY);
             }
 
-            // Vérification de l'existence
-            const item = localStorage.getItem(key);
+            // Vérification de l'existence et chargement des données
+            const item = await dataLoader.load(key);
             if (item === null) {
                 throw new Error(DELETE_ERRORS.KEY_NOT_FOUND);
             }
 
             // Vérification de l'intégrité si demandée
             if (verifyIntegrity) {
-                const isValid = await verifyDataIntegrity(key, item);
+                const isValid = await checkDataIntegrity(item);
                 if (!isValid) {
                     throw new Error(DELETE_ERRORS.INTEGRITY_CHECK_FAILED);
                 }
@@ -55,11 +120,11 @@ const storageDeleteService = (() => {
 
             // Création d'une sauvegarde si demandée
             if (createBackup) {
-                await createItemBackup(key, item);
+                await createItemBackup(key, JSON.stringify(item));
             }
 
             // Suppression de l'élément
-            localStorage.removeItem(key);
+            await secureDelete(key);
 
             // Logging de l'opération
             logDeleteOperation(key, true);
@@ -105,6 +170,11 @@ const storageDeleteService = (() => {
                     results.failed.push({ key, error: error.message });
                 }
             }));
+
+            // Pause entre les lots pour éviter la surcharge
+            if (i + DELETE_CONFIG.BATCH_SIZE < keys.length) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
         }
 
         // Log du résultat global
@@ -117,6 +187,7 @@ const storageDeleteService = (() => {
      * Crée une sauvegarde d'un élément avant suppression
      * @param {string} key - Clé de l'élément
      * @param {string} value - Valeur de l'élément
+     * @returns {Promise<string>} Clé de la sauvegarde
      */
     async function createItemBackup(key, value) {
         try {
@@ -153,6 +224,7 @@ const storageDeleteService = (() => {
             for (let i = 0; i < 3; i++) {
                 const dummy = '*'.repeat(item.length);
                 localStorage.setItem(key, dummy);
+                await new Promise(resolve => setTimeout(resolve, 10));
             }
 
             localStorage.removeItem(key);
@@ -181,7 +253,9 @@ const storageDeleteService = (() => {
             });
 
             // Garder seulement les 1000 derniers logs
-            if (logs.length > 1000) logs.shift();
+            if (logs.length > 1000) {
+                logs.splice(0, logs.length - 1000);
+            }
             
             localStorage.setItem(DELETE_CONFIG.DELETE_LOG_KEY, JSON.stringify(logs));
 

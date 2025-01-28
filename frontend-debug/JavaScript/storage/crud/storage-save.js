@@ -1,10 +1,106 @@
 // storage-save.js
 
-import { validateJSON } from '../../structure/validation-json.js';
-import { validateKeys } from '../../structure/keys-validator.js';
-import { autoSave } from '../../sync/auto-save.js';
+// Intégration de validateJSON
+const validateJSON = (() => {
+    const isValidJSONString = (str) => {
+        try {
+            JSON.parse(str);
+            return true;
+        } catch {
+            return false;
+        }
+    };
 
+    const isValidJSONData = (data) => {
+        try {
+            if (typeof data === 'undefined') return false;
+            if (data === null) return true;
+            
+            // Vérification des types primitifs
+            if (typeof data === 'string' || 
+                typeof data === 'number' || 
+                typeof data === 'boolean') {
+                return true;
+            }
 
+            // Vérification des objets et tableaux
+            JSON.stringify(data);
+            return true;
+        } catch {
+            return false;
+        }
+    };
+
+    return (data) => {
+        if (typeof data === 'string') {
+            return isValidJSONString(data);
+        }
+        return isValidJSONData(data);
+    };
+})();
+
+// Intégration de validateKeys
+const validateKeys = (() => {
+    const validateKey = (key) => {
+        if (typeof key !== 'string') return false;
+        if (key.length === 0 || key.length > 100) return false;
+        return /^[a-zA-Z0-9_-]+$/.test(key);
+    };
+
+    const validateMultipleKeys = (keys) => {
+        if (!Array.isArray(keys)) return false;
+        return keys.every(key => validateKey(key));
+    };
+
+    return {
+        validateKey,
+        validateMultipleKeys
+    };
+})();
+
+// Intégration de autoSave
+const autoSave = (() => {
+    const pendingSaves = new Map();
+    const AUTO_SAVE_DELAY = 1000; // 1 seconde
+
+    const scheduleAutoSave = (key, data, options) => {
+        if (pendingSaves.has(key)) {
+            clearTimeout(pendingSaves.get(key).timeoutId);
+        }
+
+        const timeoutId = setTimeout(async () => {
+            try {
+                await storageSaveService.saveItem(key, data, options);
+                pendingSaves.delete(key);
+            } catch (error) {
+                console.error('Auto-save failed:', error);
+            }
+        }, AUTO_SAVE_DELAY);
+
+        pendingSaves.set(key, {
+            timeoutId,
+            data,
+            options
+        });
+    };
+
+    const cancelAutoSave = (key) => {
+        if (pendingSaves.has(key)) {
+            clearTimeout(pendingSaves.get(key).timeoutId);
+            pendingSaves.delete(key);
+        }
+    };
+
+    const getAutoSaveStatus = (key) => {
+        return pendingSaves.has(key);
+    };
+
+    return {
+        scheduleAutoSave,
+        cancelAutoSave,
+        getAutoSaveStatus
+    };
+})();
 
 const storageSaveService = (() => {
     // Configuration des constantes
@@ -45,7 +141,7 @@ const storageSaveService = (() => {
 
         try {
             // Validation de la clé
-            if (!validateKey(key) || key.length > SAVE_CONFIG.MAX_KEY_LENGTH) {
+            if (!validateKeys.validateKey(key) || key.length > SAVE_CONFIG.MAX_KEY_LENGTH) {
                 throw new Error(SAVE_ERRORS.INVALID_KEY);
             }
 
@@ -104,6 +200,21 @@ const storageSaveService = (() => {
         } catch (error) {
             logSaveOperation(key, false, error.message);
             throw error;
+        }
+    }
+
+    /**
+     * Vérifie l'intégrité des données sauvegardées
+     * @param {string} key - Clé à vérifier
+     * @param {string} data - Données à vérifier
+     * @returns {Promise<boolean>} Résultat de la vérification
+     */
+    async function verifyDataIntegrity(key, data) {
+        try {
+            const savedData = localStorage.getItem(key);
+            return savedData === data;
+        } catch {
+            return false;
         }
     }
 
@@ -272,7 +383,8 @@ const storageSaveService = (() => {
         batchSave,
         getSaveLogs: () => JSON.parse(localStorage.getItem(SAVE_CONFIG.SAVE_LOG_KEY) || '[]'),
         SAVE_ERRORS,
-        SAVE_CONFIG
+        SAVE_CONFIG,
+        autoSave
     };
 })();
 

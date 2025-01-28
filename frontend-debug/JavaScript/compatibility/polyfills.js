@@ -1,6 +1,7 @@
-fichier polyfills.js // === POLYFILLS MANAGER === //
+// polyfills.js
 
-class PolyfillsManager {
+// Gestionnaire principal des polyfills
+export class PolyfillsManager {
     constructor() {
         this.polyfills = new Map();
         this.loadedPolyfills = new Set();
@@ -109,60 +110,6 @@ class PolyfillsManager {
                 }
             }
         });
-
-        // Fetch Polyfill
-        this.polyfills.set('fetch', {
-            test: () => typeof fetch === 'function',
-            implement: () => {
-                if (!window.fetch) {
-                    window.fetch = function(url, options = {}) {
-                        return new Promise((resolve, reject) => {
-                            const xhr = new XMLHttpRequest();
-                            xhr.open(options.method || 'GET', url);
-
-                            if (options.headers) {
-                                Object.keys(options.headers).forEach(key => {
-                                    xhr.setRequestHeader(key, options.headers[key]);
-                                });
-                            }
-
-                            xhr.onload = () => {
-                                resolve({
-                                    status: xhr.status,
-                                    statusText: xhr.statusText,
-                                    text: () => Promise.resolve(xhr.responseText)
-                                });
-                            };
-
-                            xhr.onerror = () => reject(new TypeError('Network request failed'));
-                            xhr.send(options.body);
-                        });
-                    };
-                }
-            }
-        });
-
-        // CustomEvent Polyfill
-        this.polyfills.set('CustomEvent', {
-            test: () => {
-                try {
-                    new window.CustomEvent('test');
-                    return true;
-                } catch (e) {
-                    return false;
-                }
-            },
-            implement: () => {
-                if (typeof window.CustomEvent !== 'function') {
-                    window.CustomEvent = function(event, params) {
-                        params = params || { bubbles: false, cancelable: false, detail: null };
-                        const evt = document.createEvent('CustomEvent');
-                        evt.initCustomEvent(event, params.bubbles, params.cancelable, params.detail);
-                        return evt;
-                    };
-                }
-            }
-        });
     }
 
     // Chargement conditionnel des polyfills
@@ -188,46 +135,14 @@ class PolyfillsManager {
         });
         return loaded;
     }
-
-    // Vérification des fonctionnalités manquantes
-    checkMissingFeatures() {
-        const missing = [];
-        this.polyfills.forEach((polyfill, name) => {
-            if (!polyfill.test()) {
-                missing.push(name);
-            }
-        });
-        return missing;
-    }
-
-    // Génération d'un rapport sur les polyfills
-    generateReport() {
-        return {
-            supported: Array.from(this.polyfills.keys()).filter(name => 
-                this.polyfills.get(name).test()
-            ),
-            missing: this.checkMissingFeatures(),
-            loaded: Array.from(this.loadedPolyfills),
-            available: Array.from(this.polyfills.keys())
-        };
-    }
 }
 
 // Utilitaires pour les polyfills
-const PolyfillUtils = {
+export const PolyfillUtils = {
     // Vérification de support d'une fonctionnalité
     checkSupport(feature) {
         const features = {
             'Promise': () => typeof Promise === 'function',
-            'fetch': () => typeof fetch === 'function',
-            'CustomEvent': () => {
-                try {
-                    new window.CustomEvent('test');
-                    return true;
-                } catch (e) {
-                    return false;
-                }
-            },
             'Array.from': () => typeof Array.from === 'function'
         };
 
@@ -246,30 +161,7 @@ const PolyfillUtils = {
     }
 };
 
-// Export des utilitaires
-export {
+export default {
     PolyfillsManager,
     PolyfillUtils
 };
-
-// Exemple d'utilisation
-function initializePolyfills() {
-    const manager = new PolyfillsManager();
-    const loadedPolyfills = manager.loadAllPolyfills();
-    const report = manager.generateReport();
-    
-    console.log('Polyfills Report:', report);
-    return {
-        manager,
-        report
-    };
-}
-
-// Initialiser et charger les polyfills nécessaires
-//const { manager, report } = initializePolyfills();
-
-// Vérifier le support d'une fonctionnalité spécifique
-//if (!PolyfillUtils.checkSupport('fetch')) {
-    // Charger le polyfill fetch
-    //manager.loadPolyfill('fetch');
-//}

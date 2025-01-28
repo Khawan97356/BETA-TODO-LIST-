@@ -1,7 +1,130 @@
 // event-handlers.js
 
-import { autoSaveService } from './auto-save.js';
-import { dataLoaderService } from './data-loader.js';
+// Intégration de autoSaveService
+const autoSaveService = (() => {
+    const state = {
+        queue: new Map(),
+        isEnabled: true,
+        config: {
+            INTERVAL: 30000,
+            DEBOUNCE_DELAY: 1000,
+            MAX_QUEUE_SIZE: 100
+        }
+    };
+
+    const queueChange = (element) => {
+        if (!state.isEnabled) return;
+
+        const key = element.getAttribute('data-auto-save') || 
+                   element.id || 
+                   `auto_save_${Date.now()}`;
+
+        const value = element.type === 'checkbox' ? element.checked : element.value;
+
+        state.queue.set(key, {
+            value,
+            timestamp: Date.now(),
+            element: element
+        });
+
+        if (state.queue.size >= state.config.MAX_QUEUE_SIZE) {
+            processQueue();
+        }
+    };
+
+    const processQueue = async () => {
+        for (const [key, data] of state.queue.entries()) {
+            try {
+                await localStorage.setItem(key, JSON.stringify(data.value));
+                state.queue.delete(key);
+            } catch (error) {
+                console.error(`Auto-save failed for ${key}:`, error);
+            }
+        }
+    };
+
+    return {
+        queueChange,
+        processQueue,
+        isEnabled: () => state.isEnabled,
+        getQueue: () => state.queue,
+        enable: () => state.isEnabled = true,
+        disable: () => state.isEnabled = false
+    };
+})();
+
+// Intégration de dataLoaderService
+const dataLoaderService = (() => {
+    const state = {
+        isLoading: false,
+        cache: new Map(),
+        errors: [],
+        config: {
+            MAX_CACHE_SIZE: 100,
+            CACHE_DURATION: 300000 // 5 minutes
+        }
+    };
+
+    const loadData = async (key) => {
+        state.isLoading = true;
+        try {
+            // Vérifier le cache d'abord
+            const cachedData = state.cache.get(key);
+            if (cachedData && 
+                Date.now() - cachedData.timestamp < state.config.CACHE_DURATION) {
+                return cachedData.data;
+            }
+
+            const data = localStorage.getItem(key);
+            if (data) {
+                const parsedData = JSON.parse(data);
+                
+                // Mise en cache
+                state.cache.set(key, {
+                    data: parsedData,
+                    timestamp: Date.now()
+                });
+
+                // Nettoyage du cache si nécessaire
+                if (state.cache.size > state.config.MAX_CACHE_SIZE) {
+                    const oldestKey = Array.from(state.cache.keys())[0];
+                    state.cache.delete(oldestKey);
+                }
+
+                return parsedData;
+            }
+            return null;
+        } catch (error) {
+            state.errors.push({
+                key,
+                error: error.message,
+                timestamp: Date.now()
+            });
+            throw error;
+        } finally {
+            state.isLoading = false;
+        }
+    };
+
+    const clearCache = () => {
+        state.cache.clear();
+    };
+
+    const removeFromCache = (key) => {
+        state.cache.delete(key);
+    };
+
+    return {
+        loadData,
+        clearCache,
+        removeFromCache,
+        getState: () => ({
+            isLoading: state.isLoading,
+            cacheSize: state.cache.size,
+            errors: [...state.errors]
+        })
+    };
+})();
 
 const eventHandlerService = (() => {
     // Configuration des constantes
@@ -76,6 +199,15 @@ const eventHandlerService = (() => {
     }
 
     /**
+     * Vérification si l'événement de formulaire doit être traité
+     */
+    function shouldHandleFormEvent(event) {
+        return event.target && 
+               (event.target.hasAttribute('data-auto-save') || 
+                event.target.form && event.target.form.hasAttribute('data-auto-save'));
+    }
+
+    /**
      * Configuration des écouteurs d'événements window
      */
     function setupWindowEventListeners() {
@@ -96,17 +228,14 @@ const eventHandlerService = (() => {
      * Configuration des écouteurs d'événements personnalisés
      */
     function setupCustomEventListeners() {
-        // Événements d'auto-save
         window.addEventListener('auto_save_update', (event) => {
             handleAutoSaveEvent(event.detail);
         });
 
-        // Événements de chargement de données
         window.addEventListener('data_loader_error', (event) => {
             handleDataLoaderError(event.detail);
         });
 
-        // Événements de monitoring
         window.addEventListener('storage_monitor_alert', (event) => {
             handleMonitorAlert(event.detail);
         });
@@ -114,7 +243,6 @@ const eventHandlerService = (() => {
 
     /**
      * Gestion des événements localStorage
-     * @param {StorageEvent} event - Événement storage
      */
     function handleStorageEvent(event) {
         try {
@@ -137,14 +265,22 @@ const eventHandlerService = (() => {
     }
 
     /**
+     * Détermination du type d'événement
+     */
+    function determineEventType(event) {
+        if (!event.oldValue && event.newValue) return HANDLER_CONFIG.STORAGE_EVENTS.SAVE;
+        if (event.oldValue && !event.newValue) return HANDLER_CONFIG.STORAGE_EVENTS.DELETE;
+        return HANDLER_CONFIG.STORAGE_EVENTS.UPDATE;
+    }
+
+    /**
      * Gestion des événements de formulaire
-     * @param {Event} event - Événement de formulaire
      */
     function handleFormEvent(event) {
         try {
             const formData = {
                 element: event.target,
-                value: getElementValue(event.target),
+                value: event.target.value,
                 timestamp: Date.now()
             };
 
@@ -158,19 +294,15 @@ const eventHandlerService = (() => {
 
     /**
      * Gestion de l'événement beforeunload
-     * @param {BeforeUnloadEvent} event - Événement beforeunload
      */
     function handleBeforeUnload(event) {
         try {
-            // Sauvegarde des modifications en attente
-            if (state.eventQueue.length > 0) {
+            if (state.eventQueue.length > 0 || autoSaveService.getQueue().size > 0) {
                 event.preventDefault();
                 event.returnValue = '';
-                
-                // Traitement synchrone de la queue
                 processQueueSync();
+                autoSaveService.processQueue();
             }
-
         } catch (error) {
             handleError('unload_event', error);
         }
@@ -178,91 +310,44 @@ const eventHandlerService = (() => {
 
     /**
      * Gestion des changements de connectivité
-     * @param {boolean} isOnline - État de la connexion
      */
     function handleConnectivityChange(isOnline) {
         try {
             if (isOnline) {
-                // Synchronisation des données
                 syncPendingChanges();
+                autoSaveService.enable();
             } else {
-                // Activation du mode hors ligne
                 enableOfflineMode();
+                autoSaveService.disable();
             }
 
             notifyConnectivityChange(isOnline);
-
         } catch (error) {
             handleError('connectivity_event', error);
         }
     }
 
     /**
-     * Gestion du dépassement de quota
-     * @param {Event} event - Événement quotaexceeded
+     * Synchronisation des changements en attente
      */
-    function handleQuotaExceeded(event) {
-        try {
-            // Notification du système de monitoring
-            notifyQuotaExceeded({
-                timestamp: Date.now(),
-                availableSpace: calculateAvailableSpace()
-            });
-
-            // Tentative de nettoyage
-            cleanupStorage();
-
-        } catch (error) {
-            handleError('quota_event', error);
-        }
+    async function syncPendingChanges() {
+        await processQueue();
+        await autoSaveService.processQueue();
     }
 
     /**
-     * Mise en queue d'un événement
-     * @param {Object} eventData - Données de l'événement
+     * Activation du mode hors ligne
      */
-    function queueEvent(eventData) {
-        state.eventQueue.push(eventData);
-        state.stats.queued++;
-        
-        if (!state.processingQueue) {
-            startQueueProcessor();
-        }
-    }
-
-    /**
-     * Démarrage du processeur de queue
-     */
-    function startQueueProcessor() {
-        if (state.processingQueue) return;
-
-        state.processingQueue = true;
-        processQueue();
-    }
-
-    /**
-     * Traitement de la queue d'événements
-     */
-    async function processQueue() {
-        while (state.eventQueue.length > 0) {
-            const event = state.eventQueue.shift();
-            try {
-                await processEvent(event);
-                state.stats.handled++;
-            } catch (error) {
-                handleError('queue_processing', error);
-                state.stats.errors++;
-            }
-        }
-
-        state.processingQueue = false;
+    function enableOfflineMode() {
+        // Implementation du mode hors ligne
     }
 
     /**
      * Traitement synchrone de la queue
      */
     function processQueueSync() {
-        state.eventQueue.forEach(event => {
+        while (state.eventQueue.length > 0) {
+            const event = state.eventQueue.shift();
             try {
                 processEventSync(event);
                 state.stats.handled++;
@@ -270,36 +355,11 @@ const eventHandlerService = (() => {
                 handleError('sync_processing', error);
                 state.stats.errors++;
             }
-        });
-
-        state.eventQueue = [];
-    }
-
-    /**
-     * Traitement d'un événement
-     * @param {Object} event - Événement à traiter
-     */
-    async function processEvent(event) {
-        switch (event.type) {
-            case HANDLER_CONFIG.STORAGE_EVENTS.SAVE:
-                await handleSaveEvent(event);
-                break;
-            case HANDLER_CONFIG.STORAGE_EVENTS.DELETE:
-                await handleDeleteEvent(event);
-                break;
-            case HANDLER_CONFIG.STORAGE_EVENTS.UPDATE:
-                await handleUpdateEvent(event);
-                break;
-            default:
-                console.warn('Unknown event type:', event.type);
         }
     }
 
     /**
-     * Utilitaire de debounce
-     * @param {Function} func - Fonction à debounce
-     * @param {number} wait - Délai d'attente
-     * @returns {Function} Fonction debounced
+     * Utilitaires
      */
     function debounce(func, wait) {
         let timeout;
@@ -313,12 +373,6 @@ const eventHandlerService = (() => {
         };
     }
 
-    /**
-     * Utilitaire de throttle
-     * @param {Function} func - Fonction à throttle
-     * @param {number} limit - Délai limite
-     * @returns {Function} Fonction throttled
-     */
     function throttle(func, limit) {
         let inThrottle;
         return function executedFunction(...args) {
@@ -328,53 +382,6 @@ const eventHandlerService = (() => {
                 setTimeout(() => inThrottle = false, limit);
             }
         };
-    }
-
-    /**
-     * Notification des changements
-     * @param {Object} data - Données du changement
-     */
-    function notifyStorageChange(data) {
-        window.dispatchEvent(new CustomEvent('storage_change', {
-            detail: data
-        }));
-    }
-
-    /**
-     * Notification des erreurs
-     * @param {string} context - Contexte de l'erreur
-     * @param {Error} error - Erreur survenue
-     */
-    function handleError(context, error) {
-        const errorData = {
-            context,
-            message: error.message,
-            timestamp: Date.now()
-        };
-
-        logError(errorData);
-        notifyError(errorData);
-    }
-
-    /**
-     * Log des erreurs
-     * @param {Object} error - Détails de l'erreur
-     */
-    function logError(error) {
-        try {
-            const logs = JSON.parse(
-                localStorage.getItem(HANDLER_CONFIG.EVENT_LOG_KEY) || '[]'
-            );
-            logs.push(error);
-
-            if (logs.length > 1000) logs.shift();
-            localStorage.setItem(
-                HANDLER_CONFIG.EVENT_LOG_KEY,
-                JSON.stringify(logs)
-            );
-        } catch (error) {
-            console.error('Failed to log error:', error);
-        }
     }
 
     // Interface publique

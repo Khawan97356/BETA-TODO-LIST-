@@ -1,25 +1,21 @@
 // === DOM EVENTS DEBUGGING TOOLKIT === //
 
-// dom-events.js dépend de
+// Imports nécessaires
 import { ModernBrowserChecker, BrowserCompatUtils } from '../compatibility/modern-browsers.js';
+import { PolyfillsManager, PolyfillUtils } from '../compatibility/polyfills.js';
 
-
-
-
-
-
-
-
-
-
+// Initialisation des outils de compatibilité
+const browserChecker = new ModernBrowserChecker();
+const polyfillsManager = new PolyfillsManager();
 
 // Utilitaire de logging des événements
 const EventLogger = {
-    // Stockage des listeners pour le débug
     eventRegistry: new Map(),
     
-    // Activation du mode debug
-    startDebugging(element = document) {
+    async startDebugging(element = document) {
+        // Vérifier la compatibilité avant de commencer
+        const compatibility = browserChecker.checkCompatibility();
+        
         const events = [
             'click', 'dblclick', 'mouseenter', 'mouseleave', 
             'mouseover', 'mouseout', 'mousemove',
@@ -32,7 +28,7 @@ const EventLogger = {
 
         events.forEach(eventType => {
             const handler = (e) => {
-                console.log(%c${eventType} Event Detected, 'color: #2196F3; font-weight: bold;', {
+                console.log(`%c${eventType} Event Detected`, 'color: #2196F3; font-weight: bold;', {
                     eventType: e.type,
                     target: e.target,
                     currentTarget: e.currentTarget,
@@ -43,7 +39,6 @@ const EventLogger = {
 
             element.addEventListener(eventType, handler, true);
             
-            // Enregistrer le listener pour pouvoir le retirer plus tard
             if (!this.eventRegistry.has(element)) {
                 this.eventRegistry.set(element, new Map());
             }
@@ -51,7 +46,6 @@ const EventLogger = {
         });
     },
 
-    // Désactivation du mode debug
     stopDebugging(element = document) {
         if (this.eventRegistry.has(element)) {
             const elementEvents = this.eventRegistry.get(element);
@@ -66,8 +60,16 @@ const EventLogger = {
 // Classe pour tester la délégation d'événements
 class EventDelegationTester {
     constructor(rootElement) {
+        // Vérifier la compatibilité du navigateur
+        const compatibility = browserChecker.checkCompatibility();
+        
         this.root = rootElement || document;
         this.delegatedHandlers = new Map();
+
+        // Vérifier le support de closest()
+        if (!Element.prototype.closest) {
+            polyfillsManager.loadPolyfill('Element.closest');
+        }
     }
 
     addDelegatedListener(selector, eventType, handler) {
@@ -96,6 +98,12 @@ const EventPerformanceMonitor = {
     measurements: new Map(),
     
     startMeasuring(eventType) {
+        // Vérifier le support de l'API Performance
+        if (!window.performance) {
+            console.warn('Performance API non supportée');
+            return;
+        }
+
         this.measurements.set(eventType, {
             count: 0,
             totalTime: 0,
@@ -141,6 +149,11 @@ const EventPerformanceMonitor = {
 class CustomEventTester {
     constructor() {
         this.events = new Set();
+        
+        // Vérifier le support des CustomEvent
+        if (typeof CustomEvent !== 'function') {
+            polyfillsManager.loadPolyfill('CustomEvent');
+        }
     }
 
     createEvent(eventName, detail = {}) {
@@ -197,8 +210,34 @@ const EventLeakDetector = {
     }
 };
 
-// Exemple d'utilisation et tests
-function runEventTests() {
+// Fonction d'initialisation du système
+async function initializeEventSystem() {
+    try {
+        // Vérifier la compatibilité
+        const compatibility = browserChecker.checkCompatibility();
+        
+        // Charger les polyfills nécessaires
+        await polyfillsManager.loadAllPolyfills();
+
+        if (compatibility.warnings.length > 0) {
+            console.warn('Avertissements de compatibilité:', compatibility.warnings);
+        }
+
+        return true;
+    } catch (error) {
+        console.error('Erreur lors de l\'initialisation:', error);
+        return false;
+    }
+}
+
+// Fonction de test
+async function runEventTests() {
+    const isInitialized = await initializeEventSystem();
+    if (!isInitialized) {
+        console.error('Échec de l\'initialisation du système d\'événements');
+        return;
+    }
+
     // Test basique des événements
     const testButton = document.createElement('button');
     testButton.textContent = 'Test Button';
@@ -227,23 +266,11 @@ export {
     EventPerformanceMonitor,
     CustomEventTester,
     EventLeakDetector,
-    runEventTests
+    runEventTests,
+    initializeEventSystem
 };
 
-
-
-// Activer le logging des événements
-// EventLogger.startDebugging();
-
-// Tester la délégation
-//const delegationTester = new EventDelegationTester(document.body);
-
-// Surveiller les performances des événements click
-// EventPerformanceMonitor.startMeasuring('click');
-
-// Tester des événements personnalisés
-// const customEventTester = new CustomEventTester();
-
-// Détecter les fuites d'événements
-// const element = document.querySelector('#myElement');
-// EventLeakDetector.trackElement(element);
+// Initialisation automatique lors du chargement du DOM
+document.addEventListener('DOMContentLoaded', async () => {
+    await initializeEventSystem();
+});

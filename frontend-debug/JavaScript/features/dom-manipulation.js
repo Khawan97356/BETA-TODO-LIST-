@@ -1,15 +1,17 @@
 // === DOM MANIPULATION DEBUGGING TOOLKIT === //
 
-// dom-manipulation.js dépend de
 import { EventLeakDetector, EventDelegationTester } from './dom-events.js';
 
 // Utilitaire pour tracer les modifications du DOM
 const DOMTracker = {
     mutations: [],
     observer: null,
+    eventLeakDetector: new EventLeakDetector(),
+    delegationTester: new EventDelegationTester(document.body),
 
     // Démarrer le suivi des modifications
     startTracking() {
+        // Configuration du MutationObserver
         this.observer = new MutationObserver((mutations) => {
             mutations.forEach(mutation => {
                 const mutationInfo = {
@@ -20,7 +22,21 @@ const DOMTracker = {
                 };
                 this.mutations.push(mutationInfo);
                 console.log('%cDOM Mutation Detected:', 'color: #4CAF50; font-weight: bold;', mutationInfo);
+
+                // Vérifier les fuites d'événements pour les nouveaux éléments
+                if (mutation.type === 'childList') {
+                    mutation.addedNodes.forEach(node => {
+                        if (node instanceof HTMLElement) {
+                            this.eventLeakDetector.trackElement(node);
+                        }
+                    });
+                }
             });
+        });
+
+        // Configuration de la délégation d'événements pour les nouveaux éléments
+        this.delegationTester.addDelegatedListener('*[data-track]', 'click', (e) => {
+            console.log('Tracked element clicked:', e.target);
         });
 
         this.observer.observe(document.body, {
@@ -33,7 +49,6 @@ const DOMTracker = {
         });
     },
 
-    // Obtenir les détails d'une mutation
     _getMutationDetails(mutation) {
         switch (mutation.type) {
             case 'childList':
@@ -55,7 +70,6 @@ const DOMTracker = {
         }
     },
 
-    // Arrêter le suivi
     stopTracking() {
         if (this.observer) {
             this.observer.disconnect();
@@ -63,46 +77,58 @@ const DOMTracker = {
         }
     },
 
-    // Obtenir l'historique des modifications
     getMutationHistory() {
         return this.mutations;
     },
 
-    // Effacer l'historique
     clearHistory() {
         this.mutations = [];
+    },
+
+    // Nouvelle méthode pour vérifier les fuites d'événements
+    checkEventLeaks(element) {
+        return this.eventLeakDetector.checkForLeaks(element);
     }
 };
 
-// Classe pour tester les manipulations DOM
+// Classe améliorée pour tester les manipulations DOM
 class DOMManipulationTester {
     constructor() {
         this.snapshots = new Map();
+        this.eventLeakDetector = new EventLeakDetector();
+        this.delegationTester = new EventDelegationTester(document.body);
     }
 
-    // Prendre un snapshot d'un élément
     takeSnapshot(element, label) {
+        // Tracker les événements avant le snapshot
+        this.eventLeakDetector.trackElement(element);
+        
         this.snapshots.set(label, {
             html: element.cloneNode(true),
             timestamp: new Date(),
             attributes: this._getAttributes(element),
-            style: window.getComputedStyle(element)
+            style: window.getComputedStyle(element),
+            eventListeners: this.eventLeakDetector.checkForLeaks(element)
         });
     }
 
-    // Comparer avec un snapshot précédent
     compareWithSnapshot(element, label) {
         const snapshot = this.snapshots.get(label);
         if (!snapshot) return null;
 
+        const currentEventListeners = this.eventLeakDetector.checkForLeaks(element);
+        
         return {
             htmlChanged: element.innerHTML !== snapshot.html.innerHTML,
             attributesChanged: this._compareAttributes(element, snapshot.attributes),
-            styleChanged: this._compareStyles(element, snapshot.style)
+            styleChanged: this._compareStyles(element, snapshot.style),
+            eventListenersChanged: this._compareEventListeners(
+                snapshot.eventListeners,
+                currentEventListeners
+            )
         };
     }
 
-    // Obtenir les attributs d'un élément
     _getAttributes(element) {
         const attributes = {};
         for (let attr of element.attributes) {
@@ -111,12 +137,10 @@ class DOMManipulationTester {
         return attributes;
     }
 
-    // Comparer les attributs
     _compareAttributes(element, snapshotAttrs) {
         const currentAttrs = this._getAttributes(element);
         const changes = {};
         
-        // Vérifier les attributs modifiés ou ajoutés
         for (let [key, value] of Object.entries(currentAttrs)) {
             if (snapshotAttrs[key] !== value) {
                 changes[key] = {
@@ -126,7 +150,6 @@ class DOMManipulationTester {
             }
         }
         
-        // Vérifier les attributs supprimés
         for (let key in snapshotAttrs) {
             if (!(key in currentAttrs)) {
                 changes[key] = {
@@ -139,7 +162,6 @@ class DOMManipulationTester {
         return changes;
     }
 
-    // Comparer les styles
     _compareStyles(element, snapshotStyle) {
         const currentStyle = window.getComputedStyle(element);
         const changes = {};
@@ -155,13 +177,49 @@ class DOMManipulationTester {
 
         return changes;
     }
+
+    _compareEventListeners(oldListeners, newListeners) {
+        const changes = {
+            added: [],
+            removed: []
+        };
+
+        if (!oldListeners || !newListeners) return null;
+
+        // Vérifier les nouveaux écouteurs
+        newListeners.forEach(listener => {
+            if (!oldListeners.find(old => 
+                old.type === listener.type && 
+                old.listener === listener.listener
+            )) {
+                changes.added.push(listener);
+            }
+        });
+
+        // Vérifier les écouteurs supprimés
+        oldListeners.forEach(listener => {
+            if (!newListeners.find(newL => 
+                newL.type === listener.type && 
+                newL.listener === listener.listener
+            )) {
+                changes.removed.push(listener);
+            }
+        });
+
+        return changes;
+    }
+
+    // Nouvelle méthode pour ajouter des tests de délégation
+    addDelegationTest(selector, eventType, handler) {
+        this.delegationTester.addDelegatedListener(selector, eventType, handler);
+    }
 }
 
-// Vérificateur de performance DOM
+// Vérificateur de performance DOM amélioré
 const DOMPerformanceChecker = {
     measurements: [],
+    eventLeakChecks: [],
 
-    // Mesurer le temps d'une opération DOM
     measure(callback, description) {
         const start = performance.now();
         const result = callback();
@@ -171,14 +229,14 @@ const DOMPerformanceChecker = {
             description,
             duration: end - start,
             timestamp: new Date(),
-            reflows: this._countReflows(callback)
+            reflows: this._countReflows(callback),
+            eventLeaks: this._checkEventLeaks()
         };
 
         this.measurements.push(measurement);
         return result;
     },
 
-    // Compter les reflows
     _countReflows(callback) {
         let reflows = 0;
         const original = Element.prototype.getBoundingClientRect;
@@ -194,12 +252,24 @@ const DOMPerformanceChecker = {
         return reflows;
     },
 
-    // Obtenir les mesures
+    _checkEventLeaks() {
+        const elements = document.querySelectorAll('*');
+        const leaks = [];
+        
+        elements.forEach(element => {
+            const elementLeaks = EventLeakDetector.checkForLeaks(element);
+            if (elementLeaks && elementLeaks.length > 0) {
+                leaks.push({ element, leaks: elementLeaks });
+            }
+        });
+
+        return leaks;
+    },
+
     getMeasurements() {
         return this.measurements;
     },
 
-    // Recommandations d'optimisation
     getOptimizationTips() {
         const tips = [];
         
@@ -211,13 +281,16 @@ const DOMPerformanceChecker = {
             tips.push("Certaines opérations prennent plus d'une frame (16ms). Envisagez des optimisations.");
         }
 
+        if (this.measurements.some(m => m.eventLeaks.length > 0)) {
+            tips.push("Des fuites d'événements ont été détectées. Vérifiez la suppression des écouteurs d'événements.");
+        }
+
         return tips;
     }
 };
 
 // Sanitizer pour les manipulations DOM
 const DOMSanitizer = {
-    // Nettoyer le HTML
     sanitizeHTML(dirty) {
         const clean = DOMPurify.sanitize(dirty, {
             ALLOWED_TAGS: ['p', 'br', 'b', 'i', 'em', 'strong', 'a'],
@@ -226,7 +299,6 @@ const DOMSanitizer = {
         return clean;
     },
 
-    // Vérifier la sécurité d'une manipulation
     validateOperation(element, operation) {
         const risks = [];
         
@@ -238,31 +310,49 @@ const DOMSanitizer = {
             risks.push('eval() est dangereux et devrait être évité');
         }
 
+        // Vérifier les écouteurs d'événements
+        const eventLeaks = EventLeakDetector.checkForLeaks(element);
+        if (eventLeaks && eventLeaks.length > 0) {
+            risks.push('Des écouteurs d\'événements non nettoyés ont été détectés');
+        }
+
         return risks;
     }
 };
 
-// Exemple d'utilisation
+// Fonction de test améliorée
 function runDOMTests() {
-    // Démarrer le tracking
     DOMTracker.startTracking();
     
-    // Créer un testeur
     const tester = new DOMManipulationTester();
+    const testElement = document.createElement('div');
+    document.body.appendChild(testElement);
     
-    // Tester une manipulation
-    const element = document.createElement('div');
-    tester.takeSnapshot(element, 'initial');
+    // Test initial
+    tester.takeSnapshot(testElement, 'initial');
     
+    // Test avec délégation d'événements
+    tester.addDelegationTest('.test-class', 'click', (e) => {
+        console.log('Test delegation clicked', e);
+    });
+    
+    // Test de performance avec vérification des fuites
     DOMPerformanceChecker.measure(() => {
-        element.innerHTML = '<p>Test content</p>';
-    }, 'innerHTML update');
+        testElement.innerHTML = '<p class="test-class">Test content</p>';
+        testElement.addEventListener('click', () => console.log('test'));
+    }, 'DOM update with event listener');
     
-    // Vérifier les changements
-    console.log(tester.compareWithSnapshot(element, 'initial'));
+    // Vérification des changements
+    const changes = tester.compareWithSnapshot(testElement, 'initial');
+    console.log('Changes detected:', changes);
     
-    // Vérifier les performances
-    console.log(DOMPerformanceChecker.getMeasurements());
+    // Vérification des performances et optimisations
+    console.log('Performance measurements:', DOMPerformanceChecker.getMeasurements());
+    console.log('Optimization tips:', DOMPerformanceChecker.getOptimizationTips());
+    
+    // Nettoyage
+    document.body.removeChild(testElement);
+    DOMTracker.stopTracking();
 }
 
 // Export des utilitaires
@@ -273,22 +363,3 @@ export {
     DOMSanitizer,
     runDOMTests
 };
-
-// Activer le suivi des modifications
-// DOMTracker.startTracking();
-
-// Tester des manipulations
-// const tester = new DOMManipulationTester();
-// const element = document.querySelector('#myElement');
-
-// Prendre un snapshot
-// tester.takeSnapshot(element, 'before');
-
-// Mesurer une opération
-//DOMPerformanceChecker.measure(() => {
-    // Votre manipulation DOM ici
-    //element.innerHTML = '<p>Nouveau contenu</p>';
-//}, 'Mise à jour du contenu');
-
-// Comparer avec le snapshot
-// const changes = tester.compareWithSnapshot(element, 'before');

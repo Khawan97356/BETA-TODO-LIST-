@@ -108,8 +108,24 @@ export const logAction = (message, data = {}) => {
     return logging.info(message, data);
 };
 
+// Ajout de la fonction logError pour error-handling.js
+export const logError = (error, context = {}) => {
+    const errorLog = {
+        timestamp: new Date().toISOString(),
+        level: logging.levels.ERROR,
+        message: error.message || 'An unknown error occurred',
+        error: {
+            name: error.name,
+            stack: error.stack,
+            type: error.type
+        },
+        context,
+        data: error
+    };
 
-// logging.js
+    logging.error(errorLog.message, errorLog);
+    return errorLog;
+};
 
 function loggingService() {
     // Configuration des constantes

@@ -1,6 +1,36 @@
 // auto-save.js
 
-import { saveData } from '../crud/storage-save.js';
+// Intégration de saveData
+const saveData = async (key, data, options = {}) => {
+    try {
+        const {
+            compress = true,
+            validate = true,
+            checkIntegrity = true,
+            createBackup = true
+        } = options;
+
+        // Validation basique
+        if (!key || typeof key !== 'string') {
+            throw new Error('Invalid storage key');
+        }
+
+        // Conversion en JSON si nécessaire
+        const jsonData = typeof data === 'string' ? data : JSON.stringify(data);
+
+        // Sauvegarde dans le localStorage
+        localStorage.setItem(key, jsonData);
+
+        return {
+            success: true,
+            key,
+            timestamp: new Date().toISOString()
+        };
+    } catch (error) {
+        console.error('Save operation failed:', error);
+        throw error;
+    }
+};
 
 const autoSaveService = (() => {
     // Configuration des constantes
@@ -148,7 +178,7 @@ const autoSaveService = (() => {
         const retries = state.retryCount.get(key) || 0;
 
         try {
-            await storageSaveService.saveItem(key, value);
+            await saveData(key, value);
             state.retryCount.delete(key);
         } catch (error) {
             if (retries < AUTO_SAVE_CONFIG.MAX_RETRIES) {
@@ -188,7 +218,7 @@ const autoSaveService = (() => {
         });
 
         try {
-            await storageSaveService.saveItem(
+            await saveData(
                 `backup_${timestamp}`,
                 backup
             );

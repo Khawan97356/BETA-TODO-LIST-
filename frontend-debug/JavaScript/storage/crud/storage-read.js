@@ -1,6 +1,62 @@
 // storage-read.js
-import { dataLoader } from '../../sync/data-loader.js';
-import { checkDataIntegrity } from '../../structure/data-integrity.js';
+
+// Intégration de dataLoader
+const dataLoader = (() => {
+    return {
+        load: async (key) => {
+            try {
+                const data = localStorage.getItem(key);
+                return data ? JSON.parse(data) : null;
+            } catch (error) {
+                console.error('Error loading data:', error);
+                return null;
+            }
+        },
+        verify: async (key) => {
+            try {
+                const data = localStorage.getItem(key);
+                return data !== null;
+            } catch (error) {
+                console.error('Error verifying data:', error);
+                return false;
+            }
+        }
+    };
+})();
+
+// Intégration de checkDataIntegrity
+const checkDataIntegrity = (() => {
+    const validateStructure = (data) => {
+        if (!data) return false;
+        if (typeof data === 'string') {
+            try {
+                JSON.parse(data);
+                return true;
+            } catch {
+                return false;
+            }
+        }
+        return typeof data === 'object' && data !== null;
+    };
+
+    const validateJSON = (data) => {
+        try {
+            JSON.parse(data);
+            return true;
+        } catch {
+            return false;
+        }
+    };
+
+    return async (data) => {
+        try {
+            return validateStructure(data) && validateJSON(data);
+        } catch (error) {
+            console.error('Data integrity check failed:', error);
+            return false;
+        }
+    };
+})();
 
 const storageReadService = (() => {
     // Configuration des constantes
@@ -25,6 +81,18 @@ const storageReadService = (() => {
         TIMEOUT_ERROR: 'READ_TIMEOUT_ERROR',
         CACHE_ERROR: 'CACHE_ACCESS_ERROR'
     };
+
+    /**
+     * Validation de la clé
+     * @param {string} key - Clé à valider
+     * @returns {boolean} Validité de la clé
+     */
+    function validateKey(key) {
+        return typeof key === 'string' && 
+               key.length > 0 && 
+               key.length <= 100 &&
+               /^[a-zA-Z0-9_-]+$/.test(key);
+    }
 
     /**
      * Lecture d'un élément avec validation et cache
@@ -55,30 +123,28 @@ const storageReadService = (() => {
                 };
             }
 
-            // Lecture avec timeout
-            const data = await readWithTimeout(key, timeout);
-
-            // Validation JSON si demandée
-            if (validateData && !validateJSON(data)) {
-                throw new Error(READ_ERRORS.PARSE_ERROR);
+            // Lecture avec dataLoader
+            const data = await dataLoader.load(key);
+            if (data === null) {
+                throw new Error(READ_ERRORS.KEY_NOT_FOUND);
             }
 
             // Vérification de l'intégrité si demandée
             if (checkIntegrity) {
-                const isValid = await verifyDataIntegrity(key, data);
+                const isValid = await checkDataIntegrity(data);
                 if (!isValid) {
                     throw new Error(READ_ERRORS.INTEGRITY_ERROR);
                 }
             }
 
             // Mise en cache
-            updateCache(key, data);
+            updateCache(key, JSON.stringify(data));
 
             // Log de l'opération
             logReadOperation(key, true);
 
             return {
-                data: JSON.parse(data),
+                data: data,
                 source: 'storage',
                 timestamp: new Date().toISOString()
             };
@@ -89,6 +155,8 @@ const storageReadService = (() => {
         }
     }
 
+    // [Le reste du code reste inchangé...]
+    
     /**
      * Lecture avec timeout
      * @param {string} key - Clé à lire
