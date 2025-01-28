@@ -104,6 +104,10 @@ export const logging = {
     }
 };
 
+export const logAction = (message, data = {}) => {
+    return logging.info(message, data);
+};
+
 
 // logging.js
 

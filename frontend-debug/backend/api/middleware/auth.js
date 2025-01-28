@@ -3,35 +3,49 @@
 import { handleError } from '../../services/error-handling.js';
 import { logAction } from '../../services/logging.js';
 
-
-// frontend-debug/backend/api/middleware/auth.js
-
 export const auth = {
-    // Vérification du token
     verifyToken: (token) => {
-        if (!token) return false;
+        if (!token) {
+            logAction('auth_token_missing', { timestamp: new Date().toISOString() }, 'warn');
+            return false;
+        }
         
-        // Simulation de vérification de token
         try {
-            return token.startsWith('Bearer ');
+            const isValid = token.startsWith('Bearer ');
+            logAction('auth_token_verify', {
+                isValid,
+                timestamp: new Date().toISOString()
+            });
+            return isValid;
         } catch (error) {
+            handleError(error, { context: 'token_verification' });
             return false;
         }
     },
 
-    // Vérification des permissions
     checkPermissions: (user, requiredPermissions) => {
-        if (!user || !requiredPermissions) return false;
+        if (!user || !requiredPermissions) {
+            logAction('auth_permission_check_failed', {
+                user: user ? 'present' : 'missing',
+                permissions: requiredPermissions ? 'present' : 'missing'
+            }, 'warn');
+            return false;
+        }
+        logAction('auth_permission_check', {
+            userId: user.id,
+            requiredPermissions
+        });
         return true; // Simulation
     },
 
-    // Génération de token (pour test)
     generateToken: (userId) => {
-        return `Bearer ${userId}_${Date.now()}`;
+        const token = `Bearer ${userId}_${Date.now()}`;
+        logAction('auth_token_generated', { userId });
+        return token;
     }
 };
+
 function authMiddleware() {
-    // Configuration des constantes
     const AUTH_CONSTANTS = {
         TOKEN_KEY: 'auth_token',
         SESSION_KEY: 'user_session',
@@ -45,19 +59,22 @@ function authMiddleware() {
         STORAGE_ERROR: 'AUTH_STORAGE_ERROR'
     };
 
-    // Gestionnaire principal d'authentification
     async function authenticate(request) {
         try {
-            // Récupération et validation du token
             const token = extractToken(request);
             if (!token) {
-                throw new Error(ERROR_CODES.NO_TOKEN);
+                const error = new Error(ERROR_CODES.NO_TOKEN);
+                handleError(error, { request: { headers: request.headers } });
+                throw error;
             }
 
-            // Validation du token et récupération des données de session
             const session = await validateAndGetSession(token);
+            
+            logAction('auth_success', {
+                token: maskToken(token),
+                sessionId: session.id
+            });
 
-            // Mise à jour du moniteur de débogage
             updateAuthDebugger({
                 action: 'authenticate',
                 token: maskToken(token),
@@ -70,6 +87,11 @@ function authMiddleware() {
             };
 
         } catch (error) {
+            const handledError = handleError(error, {
+                context: 'authentication',
+                timestamp: new Date().toISOString()
+            });
+
             updateAuthDebugger({
                 action: 'auth_error',
                 error: error.message,
@@ -78,97 +100,111 @@ function authMiddleware() {
 
             return {
                 isAuthenticated: false,
-                error: error.message
+                error: handledError.message
             };
         }
     }
 
-    // Extraction du token de la requête
     function extractToken(request) {
         const authHeader = request.headers.authorization;
-        if (!authHeader) return null;
+        if (!authHeader) {
+            logAction('auth_header_missing', {
+                headers: Object.keys(request.headers)
+            }, 'warn');
+            return null;
+        }
 
         const [bearer, token] = authHeader.split(' ');
+        if (bearer !== 'Bearer') {
+            logAction('auth_invalid_bearer', { receivedBearer: bearer }, 'warn');
+        }
         return bearer === 'Bearer' ? token : null;
     }
 
-    // Validation du token et récupération de la session
     async function validateAndGetSession(token) {
         try {
-            // Vérification dans le stockage local
             const storedSession = localStorage.getItem(AUTH_CONSTANTS.SESSION_KEY);
             if (!storedSession) {
+                logAction('auth_session_missing', { token: maskToken(token) }, 'warn');
                 throw new Error(ERROR_CODES.INVALID_TOKEN);
             }
 
             const session = JSON.parse(storedSession);
             
-            // Vérification de l'expiration
             if (isSessionExpired(session)) {
+                logAction('auth_session_expired', {
+                    sessionId: session.id,
+                    lastActivity: session.lastActivity
+                }, 'warn');
                 clearAuthData();
                 throw new Error(ERROR_CODES.EXPIRED_TOKEN);
             }
 
-            // Mise à jour du timestamp de dernière activité
             session.lastActivity = new Date().toISOString();
             localStorage.setItem(AUTH_CONSTANTS.SESSION_KEY, JSON.stringify(session));
+
+            logAction('auth_session_validated', {
+                sessionId: session.id,
+                lastActivity: session.lastActivity
+            });
 
             return session;
 
         } catch (error) {
-            throw new Error(error.message || ERROR_CODES.STORAGE_ERROR);
+            handleError(error, {
+                context: 'session_validation',
+                token: maskToken(token)
+            });
+            throw error;
         }
     }
 
-    // Vérification de l'expiration de la session
     function isSessionExpired(session) {
         const expirationTime = new Date(session.lastActivity);
-        expirationTime.setHours(expirationTime.getHours() + 1); // 1 heure d'expiration
+        expirationTime.setHours(expirationTime.getHours() + 1);
         return new Date() > expirationTime;
     }
 
-    // Nettoyage des données d'authentification
     function clearAuthData() {
         try {
             localStorage.removeItem(AUTH_CONSTANTS.TOKEN_KEY);
             localStorage.removeItem(AUTH_CONSTANTS.SESSION_KEY);
+            logAction('auth_data_cleared');
+            
             updateAuthDebugger({
                 action: 'clear_auth',
                 timestamp: new Date().toISOString()
             });
         } catch (error) {
-            console.error('Error clearing auth data:', error);
+            handleError(error, { context: 'clear_auth_data' });
         }
     }
 
-    // Masquage du token pour le débogage
     function maskToken(token) {
         if (!token) return '';
         return `${token.substr(0, 4)}...${token.substr(-4)}`;
     }
 
-    // Mise à jour du débogueur d'authentification
     function updateAuthDebugger(debugInfo) {
         try {
             const currentDebug = JSON.parse(localStorage.getItem(AUTH_CONSTANTS.DEBUG_KEY) || '[]');
             currentDebug.push(debugInfo);
             
-            // Garder seulement les 50 dernières entrées
             if (currentDebug.length > 50) {
                 currentDebug.shift();
             }
 
             localStorage.setItem(AUTH_CONSTANTS.DEBUG_KEY, JSON.stringify(currentDebug));
-
-            // Déclencher un événement pour le moniteur de stockage
             dispatchStorageEvent('auth_debug_updated', debugInfo);
 
         } catch (error) {
-            console.warn('Debug logging failed:', error);
+            handleError(error, { 
+                context: 'update_auth_debugger',
+                debugInfo
+            });
         }
     }
 
-    // Émission d'événements pour le moniteur de stockage
     function dispatchStorageEvent(type, data) {
         const event = new CustomEvent('storage_monitor', {
             detail: {
@@ -180,17 +216,24 @@ function authMiddleware() {
         window.dispatchEvent(event);
     }
 
-    // Interface de débogage
     function getAuthDebugInfo() {
         try {
-            return {
+            const debugInfo = {
                 debugLog: JSON.parse(localStorage.getItem(AUTH_CONSTANTS.DEBUG_KEY) || '[]'),
                 currentSession: JSON.parse(localStorage.getItem(AUTH_CONSTANTS.SESSION_KEY) || 'null'),
                 hasToken: !!localStorage.getItem(AUTH_CONSTANTS.TOKEN_KEY)
             };
+            
+            logAction('auth_debug_info_retrieved', {
+                hasSession: !!debugInfo.currentSession,
+                hasToken: debugInfo.hasToken
+            });
+
+            return debugInfo;
         } catch (error) {
+            const handledError = handleError(error, { context: 'get_auth_debug_info' });
             return {
-                error: 'Failed to retrieve debug info',
+                error: handledError.message,
                 timestamp: new Date().toISOString()
             };
         }

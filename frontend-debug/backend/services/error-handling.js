@@ -1,5 +1,12 @@
 // error-handling.js
 import { logError } from './logging.js';
+
+
+// Au début du fichier, juste après l'import
+export const handleError = (error, context = {}) => {
+    const errorService = errorHandlingService();
+    return errorService.handleError(error, context);
+};
 function errorHandlingService() {
     // Configuration des constantes
     const ERROR_TYPES = {
@@ -85,6 +92,7 @@ export const errorHandling = {
             timestamp: new Date().toISOString()
         };
     }
+    
 
     // Analyse de l'erreur
     function analyzeError(error) {
